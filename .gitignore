@@ -251,3 +251,4 @@ Projects/Komplett.Payments.Api/redirect.*
 /Projects/Komplett.Payments.Api/appSettings.json
 .local-chromium/
 logs/
+appsettings.json

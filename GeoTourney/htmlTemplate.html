@@ -1,0 +1,188 @@
+﻿<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+
+    <title>Geoguessr tournament</title>
+    <meta name="description" content="Geoguessr tournament" />
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+          integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+          crossorigin="" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <style>
+        body {
+            background: #808080;
+        }
+
+        .map {
+            height: 640px;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/javascript" src="../leaflet.js"></script>
+    <div class="container-fluid" id="content"></div>
+    <script>
+        let games = [];
+        let tournament = null;
+        async function init() {
+            const githubUsername = new URL(window.location).host.split('.')[0];
+        	const id = new URL(window.location).searchParams.get("id");
+            const url = `https://raw.githubusercontent.com/${githubUsername}/${githubUsername}.github.io/main/geoguessr/${id}.json`;
+            const response = await fetch(url);
+            const data = await response.json();
+            games = data.games;
+            tournament = data.tournament;
+            const content = document.getElementById("content");
+            const tournamentHtml = tournament ? createTournamentTable(tournament) : '';
+            content.innerHTML = tournamentHtml + games.map(createGame).join('');
+        }
+        init();
+
+        let maps = [];
+        const viewRound = (gameNumber, roundNumber) => {
+            var game = games.filter(x => x.gameNumber === gameNumber)[0];
+            let guesses = game.allGuesses[roundNumber];
+            guesses.sort((a, b) => b.roundScoreInPoints - a.roundScoreInPoints);
+            [0, 1, 2, 3, 4].forEach(x => {
+                document.getElementById(`mapid-game-${gameNumber}-round-${x}`).style.display = x === roundNumber ? "" : "none";
+                var roundTable = document.getElementById(`table-round-game-${gameNumber}`);
+                roundTable.innerHTML = createRoundTable(guesses, roundNumber);
+                roundTable.style.display = "";
+            });
+            const answer = game.answers[roundNumber];
+            const createIcon = (iconColor) =>
+                new L.Icon({
+                    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${iconColor}.png`,
+                    shadowUrl:
+                        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+                    iconSize: [11, 20],
+                    iconAnchor: [6, 20],
+                    popupAnchor: [1, -34],
+                    shadowSize: [0, 0],
+                });
+            const icons = ["gold", "grey", "orange", "blue"].map(createIcon);
+            if (maps[`${gameNumber}-${roundNumber}`]) {
+                return;
+            }
+
+            const map = L.map(`mapid-game-${gameNumber}-round-${roundNumber}`).setView([51.505, -0.09], 2);
+            L.tileLayer(
+                "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
+                {
+                    attribution:
+                        'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                    maxZoom: 18,
+                    id: "mapbox/streets-v11",
+                    tileSize: 512,
+                    zoomOffset: -1,
+                    accessToken:
+                        "pk.eyJ1Ijoic2xhc2hwIiwiYSI6ImNrajc2ejVuMzZna2QydnFqNjg2eGx0cDcifQ.0YrOWeCFuS0URH6E1t3qJg",
+                }
+            ).addTo(map);
+            guesses.forEach((guess, index) =>
+                L.marker([guess.lat, guess.lng],
+                    {
+                        zIndexOffset: guesses.length - index,
+                        icon: icons.slice(index)[0] || [...icons].pop(),
+                    })
+                    .bindPopup(
+                        `<b>${guess.playerName}</b><br>${guess.roundScoreInPoints}`
+                    )
+                    .addTo(map)
+            );
+            L.marker([answer.lat, answer.lng],
+                {
+                    zIndexOffset: guesses.length + 100,
+                    icon: createIcon("green"),
+                })
+                .bindPopup("<b>Actual location</b>")
+                .addTo(map);
+            maps[`${gameNumber}-${roundNumber}`] = map;
+        };
+
+        const createRoundRow = player => `
+<tr>
+            <td>${player.playerName}</td>
+            <td class="text-right">${player.roundScoreInPoints}</td>
+            <td class="text-right">${Math.round(player.distanceInMeters * 100) / 100}</td>
+</tr>
+`;
+        const createRoundTable = (players, index) => `
+<tr>
+            <th>Player</th>
+            <th class="text-right">Points in round ${index + 1}</th>
+            <th class="text-right">Distance</th>
+</tr>
+${players.map(createRoundRow).join('')}
+`;
+        const createGameRow = playerGame => `
+<tr>
+            <td>${playerGame.player}</td>
+            <td class="text-right">${playerGame.points}</td>
+            <td class="text-right">${playerGame.r1}</td>
+            <td class="text-right">${playerGame.r2}</td>
+            <td class="text-right">${playerGame.r3}</td>
+            <td class="text-right">${playerGame.r4}</td>
+            <td class="text-right">${playerGame.r5}</td>
+</tr>
+`;
+
+        const createGameTable = game => `
+<table class="table table-dark table-sm">
+            <tr>
+                <th>Player</th>
+                <th class="text-right">Points</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)">R1</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)">R2</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 2)">R3</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)">R4</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)">R5</th>
+            </tr>
+${game.playerGames.map(createGameRow).join('')}
+</table>
+`;
+
+        const createGame = game => `
+<div class="row">
+        <h4 class="col-5">Game ${game.gameNumber} - <a href="${game.gameUrl}" target="_blank" rel="noreferrer noopener">${game.mapName}</a> - ${game.gameDescription}</h4>
+</div>
+<div class="row">
+            <div class="col-5">
+                ${createGameTable(game)}
+            </div>
+            <div class="row col-7">
+                <div class="map col-12" id="mapid-game-${game.gameNumber}-round-0" style="display: none;"></div>
+                <div class="map col-12" id="mapid-game-${game.gameNumber}-round-1" style="display: none;"></div>
+                <div class="map col-12" id="mapid-game-${game.gameNumber}-round-2" style="display: none;"></div>
+                <div class="map col-12" id="mapid-game-${game.gameNumber}-round-3" style="display: none;"></div>
+                <div class="map col-12" id="mapid-game-${game.gameNumber}-round-4" style="display: none;"></div>
+                <table class="table table-dark table-sm col-6" id="table-round-game-${game.gameNumber}"></table>
+            </div>
+</div>
+`;
+        const createTournamentTableRow = playerInTournament => `
+<tr>
+            <td>${playerInTournament.playerName}</td>
+            <td class="text-right">${playerInTournament.totalPoints}</td>
+${playerInTournament.games.map(x => `<td class="text-right">${x.gamePoints === null ? "-" : x.gamePoints}</td>`).join('')}
+</tr>
+`;
+        const createTournamentTable = tournament => `
+<div class="row">
+        <table class="table table-dark table-sm">
+            <tr>
+                <th>Player</th>
+                <th class="text-right">Total points</th>
+${tournament.players[0].games.map((_, i) => `<th class="text-right">Game ${i + 1}</th>`).join('')}
+            </tr>
+${tournament.players.map(createTournamentTableRow).join('')}
+        </table>
+</div>
+`;
+    </script>
+</body>
+</html>
