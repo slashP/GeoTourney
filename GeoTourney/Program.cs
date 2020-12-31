@@ -28,6 +28,13 @@ var allOutputs = possibleOutputs.Select(x => new
     Output = x
 }).ToList();
 var activeOutputs = allOutputs.Where(x => x.Status == InitializationStatus.Ok).Select(x => x.Output).ToList();
+var gihubAccess = await Github.VerifyGithubTokenAccess(config);
+if (!gihubAccess.hasAccess)
+{
+    Console.WriteLine(gihubAccess.errorMessage);
+    return;
+}
+
 await BrowserSetup.Initiate();
 var browser = await Puppeteer.LaunchAsync(BrowserSetup.LaunchOptions);
 var page = await browser.NewPageAsync();
