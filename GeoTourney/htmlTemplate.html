@@ -41,7 +41,7 @@
             content.innerHTML = tournamentHtml + games.map(createGame).join('');
         }
         init();
-
+        const numberFormat = new Intl.NumberFormat();
         let maps = [];
         const viewRound = (gameNumber, roundNumber) => {
             var game = games.filter(x => x.gameNumber === gameNumber)[0];
@@ -104,43 +104,47 @@
             maps[`${gameNumber}-${roundNumber}`] = map;
         };
 
-        const createRoundRow = player => `
+        const createRoundRow = (player, index) => `
 <tr>
+            <td class="text-right">${index + 1}</td>
             <td>${player.playerName}</td>
-            <td class="text-right">${player.roundScoreInPoints}</td>
-            <td class="text-right">${Math.round(player.distanceInMeters * 100) / 100}</td>
+            <td class="text-right">${numberFormat.format(player.roundScoreInPoints)}</td>
+            <td class="text-right">${numberFormat.format(Math.round((player.distanceInMeters / 1000) * 100) / 100)} km.</td>
 </tr>
 `;
         const createRoundTable = (players, index) => `
 <tr>
+            <th class="text-right">Round position</th>
             <th>Player</th>
             <th class="text-right">Points in round ${index + 1}</th>
             <th class="text-right">Distance</th>
 </tr>
 ${players.map(createRoundRow).join('')}
 `;
-        const createGameRow = playerGame => `
+        const createGameRow = (playerGame, index) => `
 <tr>
+            <td class="text-right">${index + 1}</td>
             <td>${playerGame.player}</td>
-            <td class="text-right">${playerGame.points}</td>
-            <td class="text-right">${playerGame.r1}</td>
-            <td class="text-right">${playerGame.r2}</td>
-            <td class="text-right">${playerGame.r3}</td>
-            <td class="text-right">${playerGame.r4}</td>
-            <td class="text-right">${playerGame.r5}</td>
+            <td class="text-right">${numberFormat.format(playerGame.points)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r1)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r2)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r3)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r4)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r5)}</td>
 </tr>
 `;
 
         const createGameTable = game => `
 <table class="table table-dark table-sm">
             <tr>
+                <th class="text-right">#</th>
                 <th>Player</th>
                 <th class="text-right">Points</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)">R1</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)">R2</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 2)">R3</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)">R4</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)">R5</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)"><button href="#" class="btn btn-sm btn-outline-primary">R1</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)"><button href="#" class="btn btn-sm btn-outline-primary">R2</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 2)"><button href="#" class="btn btn-sm btn-outline-primary">R3</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)"><button href="#" class="btn btn-sm btn-outline-primary">R4</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)"><button href="#" class="btn btn-sm btn-outline-primary">R5</button></th>
             </tr>
 ${game.playerGames.map(createGameRow).join('')}
 </table>
@@ -148,7 +152,9 @@ ${game.playerGames.map(createGameRow).join('')}
 
         const createGame = game => `
 <div class="row">
-        <h4 class="col-5">Game ${game.gameNumber} - <a href="${game.gameUrl}" target="_blank" rel="noreferrer noopener">${game.mapName}</a> - ${game.gameDescription}</h4>
+    <div class="alert alert-dark col-3 mx-3 text-center" role="alert">
+      Game ${game.gameNumber} - <a class="alert-link" href="${game.gameUrl}" target="_blank" rel="noreferrer noopener">${game.mapName}</a> - ${game.gameDescription}
+    </div>
 </div>
 <div class="row">
             <div class="col-5">
@@ -164,17 +170,19 @@ ${game.playerGames.map(createGameRow).join('')}
             </div>
 </div>
 `;
-        const createTournamentTableRow = playerInTournament => `
+        const createTournamentTableRow = (playerInTournament, index) => `
 <tr>
+            <td class="text-right">${index + 1}</td>
             <td>${playerInTournament.playerName}</td>
-            <td class="text-right">${playerInTournament.totalPoints}</td>
-${playerInTournament.games.map(x => `<td class="text-right">${x.gamePoints === null ? "-" : x.gamePoints}</td>`).join('')}
+            <td class="text-right">${numberFormat.format(playerInTournament.totalPoints)}</td>
+${playerInTournament.games.map(x => `<td class="text-right">${x.gamePoints === null ? "-" : numberFormat.format(x.gamePoints)}</td>`).join('')}
 </tr>
 `;
         const createTournamentTable = tournament => `
 <div class="row">
-        <table class="table table-dark table-sm">
+        <table class="table table-dark table-sm col-${Math.min(12, Math.max(4, tournament.players[0].games.length))}">
             <tr>
+                <th class="text-right">Overall position</th>
                 <th>Player</th>
                 <th class="text-right">Total points</th>
 ${tournament.players[0].games.map((_, i) => `<th class="text-right">Game ${i + 1}</th>`).join('')}
