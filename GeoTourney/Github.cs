@@ -28,9 +28,8 @@ namespace GeoTourney
             var repoName = $"{owner}.github.io";
             var repo = await CreateRepositoryIfNotExists(client, owner, repoName);
 
-            await CreateFileIfNotExists(client, repo, await File.ReadAllTextAsync("js/leaflet.js"), "geoguessr/leaflet.js", "File change.");
-            var githubHtmlFilePath = "geoguessr/v3.20/tournament.html";
-            await CreateFileIfNotExists(client, repo, await File.ReadAllTextAsync("htmlTemplate.html"), githubHtmlFilePath, "File change.");
+            var githubHtmlFilePath = "geoguessr/v3.21/tournament.html";
+            await CreateFileIfNotExists(client, repo, EmbeddedFileHelper.Content("htmlTemplate.html"), githubHtmlFilePath, "File change.");
             var id = DateTime.Now.Ticks.ToString();
             var path = $"geoguessr/{id}.json";
             await CreateFileIfNotExists(client, repo, fileContent, path, "Geoguessr tournament.");
