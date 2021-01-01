@@ -35,6 +35,13 @@ if (!gihubAccess.hasAccess)
     return;
 }
 
+var localExampleTournamentPath = config["LocalExampleTournamentPath"];
+if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampleTournamentPath))
+{
+    var url = await Github.UploadTournamentData(config, await File.ReadAllTextAsync(localExampleTournamentPath));
+    await Clip.SetText(url);
+}
+
 await BrowserSetup.Initiate();
 var browser = await Puppeteer.LaunchAsync(BrowserSetup.LaunchOptions);
 var page = await browser.NewPageAsync();
