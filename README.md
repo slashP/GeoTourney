@@ -51,4 +51,19 @@ This is the Twitch account the application will send chat messages on behalf of.
   * `!restart` to forget current tournament and start over.
   * `!elim` to toggle elimination mode on/off.
 
-  ![Gameplay in action](setup/game_in_action.png "Gameplay in action")
+![Gameplay in action](setup/game_in_action.png "Gameplay in action")
+
+### Motivation, explanation, FAQ, ramblings
+Basically I wanted to see an application that handled multi-game Geoguessr tournaments in a better way and let the users play on their computers. Secondly having a good presentation of results that was dynamic and available to everyone (not just on the streamer's machine) also after the games finish was a goal.
+
+##### Technical decisions
+Having few external dependencies and let those be rock solid, big actors. Not having a specific backend for this appliation is therefore a conscious decision. Instead it integrates with Twitch to receive messages/commands and Github to store and present results. I wanted each user of the application to have their own Github account and by such *they* are the owner of the tournament data and are not relying on any other user's decision to keep it running or not delete it.
+
+Using Github essentially enabled the possibility to create a web site for each user and then create new, static pages for each game/tournament. That way anyone can see the results and it should be available for as long as the user wants to keep the results/account. Since each page is self-contained, there is no reason it shouldn't work even years from now. That way these result pages can be used as an "archive" by just keeping the URL somewhere, f.ex. enabling the possibility to do (more or less manual) aggregations across tournaments.
+
+Since Github runs *so* much of the software of the world, availability should be very good and I'm not afraid of APIs suddenly breaking. This in great contrast to f.ex. Hastebin.
+
+##### Issues/ideas
+If you run into an issue, f.ex. the appliaction crashing, please head over to the [issues page](https://github.com/slashP/GeoTourney/issues). Please include the content from `errors.txt` in the same folder you have `GeoTourney.exe` if such a file is present.
+
+If you have an idea for a feature, you can also post it as an issue and we can have a discussion on how it could work.
