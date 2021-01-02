@@ -12,6 +12,8 @@ using PuppeteerSharp;
 // https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr
 try
 {
+    var name = typeof(GeoTournament).Assembly.GetName();
+    Console.WriteLine($"Starting {name.Name} {GetVersion()}");
     GeoTournament tournament = new();
     var config = new ConfigurationBuilder()
         .SetBasePath(Directory.GetCurrentDirectory())
@@ -121,7 +123,7 @@ catch (Exception e)
     Console.WriteLine("The application will stop and needs to be started again. Press any key to close.");
     try
     {
-        await File.AppendAllTextAsync("errors.txt", $"{DateTime.UtcNow:s}: {e}{Environment.NewLine}");
+        await File.AppendAllTextAsync("errors.txt", $"{DateTime.UtcNow:s}: {GetVersion()}{Environment.NewLine}{e}{Environment.NewLine}");
     }
     catch (Exception)
     {
@@ -140,4 +142,11 @@ static void OnMessageReceived(object? sender, string e)
 static void WriteOutput(IEnumerable<IGameEventOutput> activeOutputs, string message)
 {
     foreach (var output in activeOutputs) output.Write(message);
+}
+
+static string GetVersion()
+{
+    var name = typeof(GeoTournament).Assembly.GetName();
+    var version = name.Version;
+    return $"v.{version?.Major}.{version?.Minor}.{version?.Build}";
 }
