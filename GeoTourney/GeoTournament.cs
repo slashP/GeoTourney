@@ -19,6 +19,30 @@ namespace GeoTourney
 
         public string? CurrentGameId { get; set; }
 
+        public bool PlayWithEliminations { get; private set; }
+
+        public GameState GameState { get; set; }
+
+        public GeoTournament Restart()
+        {
+            return new()
+            {
+                PlayWithEliminations = PlayWithEliminations
+            };
+        }
+
+        public async Task<string?> ToggleEliminations(Page page, IConfiguration config)
+        {
+            PlayWithEliminations = !PlayWithEliminations;
+            // safeguarding from crazy situations.
+            if (GameState == GameState.PendingEliminations)
+            {
+                return (await EliminateAndFinish(page, config, 0)).url;
+            }
+
+            return null;
+        }
+
         static IEnumerable<(string userId, int? points)> EliminationPossibilities(PlayerGame[] currentGame, List<GameObject> games)
         {
             var allPlayerIdsInAllGames = games.Select(x => x.PlayerGames.Select(y => y.userId)).Concat(new[] { currentGame.Select(y => y.userId) }.AsEnumerable()).ToArray();
@@ -44,45 +68,67 @@ namespace GeoTourney
             }
         }
 
-        async Task<string> FinishGame(Uri uri, IConfiguration config, PlayerGame[] playerGames)
+        async Task<string> FinishGame(IConfiguration config, PlayerGame[] playerGames, List<string> userIdsEliminated)
         {
-            var eliminationPossibilities =
-                EliminationPossibilities(playerGames, Games).DistinctBy(x => x.userId).ToList();
-            var didNotPlayThisGame = eliminationPossibilities.Where(x => x.points == null).ToList();
-            var didNotPlayDescritpion = didNotPlayThisGame.Any()
-                ? $" {didNotPlayThisGame.Count} did not play this round, but played the one before."
-                : string.Empty;
-            var eliminate = "0";
-            int.TryParse(eliminate, out var numberOfEliminations);
-            var eliminees = eliminationPossibilities.Take(numberOfEliminations).ToList();
             Games.Add(new GameObject
             {
-                GameUrl = uri,
+                GameUrl = new Uri($"https://www.geoguessr.com/results/{CurrentGameId}"),
                 GameNumber = Games.Count + 1,
                 MapName = playerGames.First().game.mapName,
                 PlayerGames = playerGames,
-                UserIdsEliminated = eliminees.Select(x => x.userId).ToList()
+                UserIdsEliminated = userIdsEliminated,
+                PlayedWithEliminations = PlayWithEliminations
             });
+
+            CurrentGameId = null;
+            GameState = GameState.NotActive;
+
             var gist = await GenerateUrlToLatestTournamentInfo(Games.ToList(), config);
             return gist;
         }
 
-        public async Task<(bool finished, string? gistUrl)> CheckIfCurrentGameFinished(Page page, IConfigurationRoot config)
+        public async Task<(bool finished, string? gistUrl, string? messageToChat)> CheckIfCurrentGameFinished(Page page, IConfigurationRoot config)
         {
-            if (CurrentGameId == null)
+            if (GameState == GameState.NotActive || GameState == GameState.PendingEliminations)
             {
-                return (false, null);
+                return (false, null, null);
             }
 
-            var playerGames = await GeoguessrApi.LoadGame(CurrentGameId, page);
+            var playerGames = await GeoguessrApi.LoadGame(CurrentGameId!, page);
             if (playerGames.Any())
             {
-                var url = await FinishGame(new Uri($"https://www.geoguessr.com/results/{CurrentGameId}"), config, playerGames);
-                CurrentGameId = null;
-                return (true, url);
+                if (PlayWithEliminations)
+                {
+                    var eliminationPossibilities =
+                        EliminationPossibilities(playerGames, Games).DistinctBy(x => x.userId).ToList();
+                    var didNotPlayThisGame = eliminationPossibilities.Where(x => x.points == null).ToList();
+                    var didNotPlayDescritpion = didNotPlayThisGame.Any()
+                        ? $" {didNotPlayThisGame.Count} did not play this round, but played the one before."
+                        : string.Empty;
+                    GameState = GameState.PendingEliminations;
+                    return (false, null, $"{eliminationPossibilities.Count} players are still in the game.{didNotPlayDescritpion} How many do you want to eliminate?");
+                }
+
+                var url = await FinishGame(config, playerGames, new List<string>());
+                return (true, url, null);
             }
 
-            return (false, null);
+            return (false, null, null);
+        }
+
+        public async Task<(string? url, string? messageToChat)> EliminateAndFinish(Page page, IConfiguration config, int numberOfEliminations)
+        {
+            if (GameState != GameState.PendingEliminations)
+            {
+                return (null, null);
+            }
+
+            var playerGames = await GeoguessrApi.LoadGame(CurrentGameId!, page);
+            var eliminationPossibilities =
+                EliminationPossibilities(playerGames, Games).DistinctBy(x => x.userId).ToList();
+            var eliminees = eliminationPossibilities.Take(numberOfEliminations).ToList();
+            var url = await FinishGame(config, playerGames, eliminees.Select(x => x.userId).ToList());
+            return (url, $"{numberOfEliminations} players eliminated.");
         }
 
         static async Task<string> GenerateUrlToLatestTournamentInfo(List<GameObject> games, IConfiguration configuration)
@@ -96,10 +142,9 @@ namespace GeoTourney
         {
             var rows = new[]
             {
-                new {Command = "[URL]", Description = "Post a Geoguessr challenge page URL to Twitch chat."},
-                new {Command = "exit", Description = "Stop the program"},
-                new {Command = "!restart", Description = "Forgets the current tournament and starts a new one."},
-                new {Command = "!totalscore", Description = "Prints the total (summed) score for all games in the current tournament, sends it to Hastebin and copies the Hastebin URL to clipboard."}
+                new {Command = "!restart", Description = "Forget current tournament and start over"},
+                new {Command = "!totalscore", Description = "Get a results page with all games and points summed."},
+                new {Command = "!elim", Description = "Toggle elimination mode on/off."},
             };
             Console.WriteLine(ConsoleTable.From(rows).ToMinimalString());
         }
@@ -109,13 +154,19 @@ namespace GeoTourney
             return await GenerateUrlToLatestTournamentInfo(Games, config);
         }
 
-        public void SetCurrentGame(Uri urlToChallenge)
+        public async Task SetCurrentGame(Uri urlToChallenge, Page page, IConfiguration config)
         {
+            if (GameState == GameState.PendingEliminations)
+            {
+                await EliminateAndFinish(page, config, 0);
+            }
+
             var gameId = urlToChallenge.PathAndQuery.Split('/').LastOrDefault();
 
             if (Games.All(x => x.GameUrl?.PathAndQuery.Split('/').LastOrDefault() != gameId))
             {
                 CurrentGameId = gameId;
+                GameState = GameState.Running;
             }
         }
 
@@ -128,7 +179,7 @@ namespace GeoTourney
             return url;
         }
 
-        static EliminationStatus GetEliminationStatus(IReadOnlyCollection<GameObject> games, string userId)
+        public static EliminationStatus GetEliminationStatus(IReadOnlyCollection<GameObject> games, string userId)
         {
             if (games.FirstOrDefault()?.PlayerGames.Any(x => x.userId == userId) == false)
             {
@@ -155,6 +206,7 @@ namespace GeoTourney
             public List<string> UserIdsEliminated { get; set; } = new();
             public string MapName { get; set; } = string.Empty;
             public Uri? GameUrl { get; set; }
+            public bool PlayedWithEliminations { get; set; }
         }
 
         public record PlayerGame
@@ -198,10 +250,17 @@ namespace GeoTourney
         }
     }
 
-    internal enum EliminationStatus
+    public enum EliminationStatus
     {
         DidNotPlayGame1,
         Eliminated,
         StillInTheGame
+    }
+
+    public enum GameState
+    {
+        NotActive,
+        Running,
+        PendingEliminations
     }
 }

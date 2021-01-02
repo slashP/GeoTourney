@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using GeoTourney;
 using Microsoft.Extensions.Configuration;
 using PuppeteerSharp;
@@ -71,17 +72,24 @@ while (true)
         foreach (var output in activeOutputs) output.KeepAlive();
 
         var result = await tournament.CheckIfCurrentGameFinished(page, config);
-        if (result.finished) WriteOutput(activeOutputs, $"Tournament results here: {result.gistUrl}");
+        if (result.finished)
+        {
+            WriteOutput(activeOutputs, $"Tournament results here: {result.gistUrl}");
+        }
+        else if (!string.IsNullOrEmpty(result.messageToChat))
+        {
+            WriteOutput(activeOutputs, result.messageToChat);
+        }
     }
     else if (Uri.TryCreate(inputCommand, UriKind.Absolute, out var uri))
     {
-        tournament.SetCurrentGame(uri);
+        await tournament.SetCurrentGame(uri, page, config);
         var currentGameNumber = (tournament.Games.OrderByDescending(x => x.GameNumber).FirstOrDefault()?.GameNumber ?? 0) + 1;
         WriteOutput(activeOutputs, $"Game #{currentGameNumber}: {uri}");
     }
     else if (inputCommand == "restart")
     {
-        tournament = new GeoTournament();
+        tournament = tournament.Restart();
     }
     else if (inputCommand == "gamescore")
     {
@@ -93,6 +101,19 @@ while (true)
         var url = await tournament.PrintTotalScore(config);
         WriteOutput(activeOutputs, $"Tournament results: {url}");
     }
+    else if (inputCommand == "elim")
+    {
+        var message = await tournament.ToggleEliminations(page, config);
+        WriteOutput(activeOutputs, $"Eliminations are now {(tournament.PlayWithEliminations ? "ON" : "OFF")}.");
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        if(message != null) WriteOutput(activeOutputs, message);
+    }
+    else if (inputCommand.StartsWith("eliminate"))
+    {
+        var numberOfEliminations = int.TryParse(inputCommand.Split(' ').LastOrDefault(), out var num) ? num : 0;
+        var (url, messageToChat) = await tournament.EliminateAndFinish(page, config, numberOfEliminations);
+        if (messageToChat != null || url != null) WriteOutput(activeOutputs, $"{messageToChat} Tournament results: {url}");
+    }
 }
 
 static void OnMessageReceived(object? sender, string e)
@@ -100,6 +121,7 @@ static void OnMessageReceived(object? sender, string e)
     if (e?.StartsWith("https://www.geoguessr.com/challenge") ?? false)
         ReadConsole.QueueCommand(e);
     else if (e?.StartsWith("!") ?? false) ReadConsole.QueueCommand(new string(e.Skip(1).ToArray()));
+    else if(int.TryParse(e, out var number) && number >= 0) ReadConsole.QueueCommand($"eliminate {number}");
 }
 
 static void WriteOutput(IEnumerable<IGameEventOutput> activeOutputs, string message)

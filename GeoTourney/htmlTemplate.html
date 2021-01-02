@@ -98,25 +98,25 @@
             }
         ).addTo(map);
         guesses.forEach((guess, index) => {
-                let marker = L.marker([guess.lat, guess.lng],
-                    {
-                        zIndexOffset: guesses.length - index,
-                        icon: icons.slice(index)[0] || [...icons].pop(),
-                    });
-                marker.on('mouseover', function (e) {
-                    this.openPopup();
+            let marker = L.marker([guess.lat, guess.lng],
+                {
+                    zIndexOffset: guesses.length - index,
+                    icon: icons.slice(index)[0] || [...icons].pop(),
                 });
-                marker.on('mouseout', function (e) {
-                    this.closePopup();
-                });
-                marker.bindPopup(`<b>${guess.playerName}</b><br>${guess.roundScoreInPoints}`).addTo(map);
-            }
+            marker.on('mouseover', function (e) {
+                this.openPopup();
+            });
+            marker.on('mouseout', function (e) {
+                this.closePopup();
+            });
+            marker.bindPopup(`<b>${guess.playerName}</b><br>${guess.roundScoreInPoints}`).addTo(map);
+        }
         );
         L.marker([answer.lat, answer.lng],
-                {
-                    zIndexOffset: guesses.length + 100,
-                    icon: new L.NumberedDivIcon({ number: null, iconUrl: "https://i.imgur.com/uS6hKqq.png" }),
-                })
+            {
+                zIndexOffset: guesses.length + 100,
+                icon: new L.NumberedDivIcon({ number: null, iconUrl: "https://i.imgur.com/uS6hKqq.png" }),
+            })
             .bindPopup("<b>Actual location</b>")
             .addTo(map);
         maps[`${gameNumber}-${roundNumber}`] = map;
@@ -139,10 +139,26 @@
 </tr>
 ${players.map(createRoundRow).join('')}
 `;
-    const createGameRow = (playerGame, index) => `
+    const eliminationClass = (game, playerGame) => game.playedWithEliminations ?
+        playerGame.eliminatedInGame === null || playerGame.eliminatedInGame > game.gameNumber ?
+            'text-success' : playerGame.eliminatedInGame === '-'
+                ? 'text-muted' : playerGame.eliminatedInGame === game.gameNumber.toString() ? 'text-danger' : 'text-warning' : '';
+
+    const eliminationDescription = (game, playerGame) => {
+        switch (eliminationClass(game, playerGame)) {
+            case "text-success": return "Still in the tournament.";
+            case "text-warning": return "Eliminated in previous game.";
+            case "text-danger": return "Eliminated in this game.";
+            case "text-muted": return "Did not play game #1.";
+            default: return "";
+        }
+    }
+
+    const createGameRow = (game, playerGame, index) => `
 <tr>
             <td class="text-right">${index + 1}</td>
-            <td>${playerGame.player}</td>
+            <td class="${eliminationClass(game, playerGame)}" title="${eliminationDescription(game, playerGame)}">${playerGame.player}</td>
+${game.playedWithEliminations ? `<td class="text-right">${playerGame.eliminatedInGame || ''}</td>` : ''}
             <td class="text-right">${numberFormat.format(playerGame.points)}</td>
             <td class="text-right">${numberFormat.format(playerGame.r1)}</td>
             <td class="text-right">${numberFormat.format(playerGame.r2)}</td>
@@ -157,6 +173,7 @@ ${players.map(createRoundRow).join('')}
             <tr>
                 <th class="text-right">#</th>
                 <th>Player</th>
+                ${game.playedWithEliminations ? '<th class="text-right">Eliminated in game</th>' : ''}
                 <th class="text-right">Points</th>
                 <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)"><button href="#" class="btn btn-sm btn-outline-primary">R1</button></th>
                 <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)"><button href="#" class="btn btn-sm btn-outline-primary">R2</button></th>
@@ -164,7 +181,7 @@ ${players.map(createRoundRow).join('')}
                 <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)"><button href="#" class="btn btn-sm btn-outline-primary">R4</button></th>
                 <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)"><button href="#" class="btn btn-sm btn-outline-primary">R5</button></th>
             </tr>
-${game.playerGames.map(createGameRow).join('')}
+${game.playerGames.map((pg, i) => createGameRow(game, pg, i)).join('')}
 </table>
 `;
 
@@ -227,7 +244,7 @@ ${tournament.players.map(createTournamentTableRow).join('')}
                 var img = this._createImg(this.options['iconUrl']);
                 img.style = "height: 25px;";
                 var numdiv = document.createElement('div');
-                numdiv.setAttribute ( "class", "number" );
+                numdiv.setAttribute("class", "number");
                 numdiv.innerHTML = this.options['number'] || '';
                 div.appendChild(img);
                 div.appendChild(numdiv);

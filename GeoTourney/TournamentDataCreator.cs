@@ -31,13 +31,15 @@ namespace GeoTourney
                         r2 = pg.game.player.guesses.Skip(1).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r3 = pg.game.player.guesses.Skip(2).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r4 = pg.game.player.guesses.Skip(3).FirstOrDefault()?.roundScoreInPoints ?? 0,
-                        r5 = pg.game.player.guesses.Skip(4).FirstOrDefault()?.roundScoreInPoints ?? 0
+                        r5 = pg.game.player.guesses.Skip(4).FirstOrDefault()?.roundScoreInPoints ?? 0,
+                        eliminatedInGame = EliminatedInGameDescription(g, pg.userId)
                     }).ToList(),
                     answers = game.rounds.Select(x => new { x.lat, x.lng }).ToArray(),
                     mapName = game.mapName,
                     gameNumber = x.GameNumber,
                     gameUrl = x.GameUrl,
-                    gameDescription = GameDescription(x.PlayerGames.First().game)
+                    gameDescription = GameDescription(x.PlayerGames.First().game),
+                    playedWithEliminations = x.PlayedWithEliminations
                 };
             });
             var tournament = includeTotalScore ? new
@@ -71,6 +73,14 @@ namespace GeoTourney
                 _ => "Moving allowed"
             };
             return game.timeLimit.HasValue ? $"{game.timeLimit} sec. {restrictions}" : restrictions;
+        }
+
+        static string? EliminatedInGameDescription(IReadOnlyCollection<GeoTournament.GameObject> games, string userId)
+        {
+            return GeoTournament.GetEliminationStatus(games, userId) == EliminationStatus.DidNotPlayGame1
+                ? "-"
+                : games.FirstOrDefault(g => g.UserIdsEliminated.Contains(userId))?.GameNumber.ToString() ??
+                  null;
         }
     }
 
