@@ -10,6 +10,7 @@ namespace GeoTourney
 {
     public class TwitchClient : IGameEventOutput
     {
+        public const string TwitchChannelConfigKey = "TwitchChannel";
         TwitchLib.Client.TwitchClient? _client;
         string? _twitchChannel;
         string? _twitchBotUsername;
@@ -19,7 +20,7 @@ namespace GeoTourney
         public InitializationStatus Initialize(IConfiguration configuration, EventHandler<string> onMessageReceived)
         {
             _onMessageReceived = onMessageReceived;
-            _twitchChannel = configuration["TwitchChannel"];
+            _twitchChannel = configuration[TwitchChannelConfigKey];
             _twitchBotUsername = configuration["TwitchBotUsername"];
             _twitchOAuth = configuration["TwitchToken"];
             if (string.IsNullOrEmpty(_twitchChannel) || string.IsNullOrEmpty(_twitchBotUsername) || string.IsNullOrEmpty(_twitchOAuth))

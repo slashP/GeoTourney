@@ -37,7 +37,7 @@ namespace GeoTourney
             // safeguarding from crazy situations.
             if (GameState == GameState.PendingEliminations)
             {
-                return (await EliminateAndFinish(page, config, 0)).url;
+                return await EliminateAndFinish(page, config, 0);
             }
 
             return null;
@@ -70,7 +70,7 @@ namespace GeoTourney
 
         async Task<string> FinishGame(IConfiguration config, PlayerGame[] playerGames, List<string> userIdsEliminated)
         {
-            Games.Add(new GameObject
+            var newGame = new GameObject
             {
                 GameUrl = new Uri($"https://www.geoguessr.com/results/{CurrentGameId}"),
                 GameNumber = Games.Count + 1,
@@ -78,24 +78,25 @@ namespace GeoTourney
                 PlayerGames = playerGames,
                 UserIdsEliminated = userIdsEliminated,
                 PlayedWithEliminations = PlayWithEliminations
-            });
+            };
+            Games.Add(newGame);
 
             CurrentGameId = null;
             GameState = GameState.NotActive;
 
-            var gist = await GenerateUrlToLatestTournamentInfo(Games.ToList(), config);
-            return gist;
+            var url = await GenerateUrlToLatestTournamentInfo(Games.ToList(), config);
+            return $"Game #{newGame.GameNumber} finished. {url}";
         }
 
-        public async Task<(bool finished, string? gistUrl, string? messageToChat)> CheckIfCurrentGameFinished(Page page, IConfigurationRoot config)
+        public async Task<string?> CheckIfCurrentGameFinished(Page page, IConfiguration config)
         {
             if (GameState == GameState.NotActive || GameState == GameState.PendingEliminations)
             {
-                return (false, null, null);
+                return null;
             }
 
-            var playerGames = await GeoguessrApi.LoadGame(CurrentGameId!, page);
-            if (playerGames.Any())
+            var (error, playerGames) = await GeoguessrApi.LoadGame(CurrentGameId!, page, config);
+            if (string.IsNullOrEmpty(error) && playerGames.Any())
             {
                 if (PlayWithEliminations)
                 {
@@ -106,29 +107,29 @@ namespace GeoTourney
                         ? $" {didNotPlayThisGame.Count} did not play this round, but played the one before."
                         : string.Empty;
                     GameState = GameState.PendingEliminations;
-                    return (false, null, $"{eliminationPossibilities.Count} players are still in the game.{didNotPlayDescritpion} How many do you want to eliminate?");
+                    return $"{eliminationPossibilities.Count} players are still in the game.{didNotPlayDescritpion} How many do you want to eliminate?";
                 }
 
-                var url = await FinishGame(config, playerGames, new List<string>());
-                return (true, url, null);
+                var messageToChat = await FinishGame(config, playerGames, new List<string>());
+                return messageToChat;
             }
 
-            return (false, null, null);
+            return error;
         }
 
-        public async Task<(string? url, string? messageToChat)> EliminateAndFinish(Page page, IConfiguration config, int numberOfEliminations)
+        public async Task<string?> EliminateAndFinish(Page page, IConfiguration config, int numberOfEliminations)
         {
             if (GameState != GameState.PendingEliminations)
             {
-                return (null, null);
+                return null;
             }
 
-            var playerGames = await GeoguessrApi.LoadGame(CurrentGameId!, page);
+            var (_, playerGames) = await GeoguessrApi.LoadGame(CurrentGameId!, page, config);
             var eliminationPossibilities =
                 EliminationPossibilities(playerGames, Games).DistinctBy(x => x.userId).ToList();
             var eliminees = eliminationPossibilities.Take(numberOfEliminations).ToList();
             var url = await FinishGame(config, playerGames, eliminees.Select(x => x.userId).ToList());
-            return (url, $"{numberOfEliminations} players eliminated.");
+            return $"{numberOfEliminations} players eliminated. {url}";
         }
 
         static async Task<string> GenerateUrlToLatestTournamentInfo(List<GameObject> games, IConfiguration configuration)

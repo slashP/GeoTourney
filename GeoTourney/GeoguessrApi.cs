@@ -3,19 +3,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using PuppeteerSharp;
 
 namespace GeoTourney
 {
     public class GeoguessrApi
     {
+        static int ErrorMessageCount;
         static readonly Dictionary<string, GeoTournament.PlayerGame[]> _games = new();
 
-        public static async Task<GeoTournament.PlayerGame[]> LoadGame(string gameId, Page page)
+        public static async Task<(string? error, GeoTournament.PlayerGame[] playerGames)> LoadGame(string gameId, Page page, IConfiguration config)
         {
+            var cookies = await page.GetCookiesAsync("https://www.geoguessr.com");
+            var isSignedIn = cookies.Any(x => x.Name == "_ncfa");
+            if (!isSignedIn)
+            {
+                var errorMessage = ++ErrorMessageCount > 3 ? null : $"@{config[TwitchClient.TwitchChannelConfigKey]} You have not signed in to https://www.geoguessr.com correctly.";
+                return (errorMessage, Array.Empty<GeoTournament.PlayerGame>());
+            }
+
             if (_games.TryGetValue(gameId, out var games))
             {
-                return games;
+                return (null, games);
             }
 
             await page.GoToAsync($"https://www.geoguessr.com/api/v3/results/scores/{gameId}/0/10000");
@@ -23,12 +33,12 @@ namespace GeoTourney
             var jsonString = new string(content.SkipWhile(x => x != '[' && x != '{').TakeWhile(x => x != '<').ToArray());
             if (WasNotAllowed(jsonString))
             {
-                return Array.Empty<GeoTournament.PlayerGame>();
+                return (null, Array.Empty<GeoTournament.PlayerGame>());
             }
 
             var playerGames = JsonSerializer.Deserialize<GeoTournament.PlayerGame[]>(jsonString) ?? Array.Empty<GeoTournament.PlayerGame>();
             _games.Add(gameId, playerGames);
-            return playerGames;
+            return (null, playerGames);
         }
 
         static bool WasNotAllowed(string json)

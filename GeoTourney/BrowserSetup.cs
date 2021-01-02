@@ -7,9 +7,10 @@ namespace GeoTourney
     {
         public static readonly LaunchOptions LaunchOptions = new()
         {
-            DefaultViewport = new ViewPortOptions { Width = 1600, Height = 1000 },
+            DefaultViewport = new ViewPortOptions { Width = 1000, Height = 800 },
             SlowMo = 5,
-            Headless = false
+            Headless = false,
+            Args = new[] { "--start-maximized" }
         };
 
         public static async Task Initiate()

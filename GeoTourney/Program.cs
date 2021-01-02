@@ -71,14 +71,10 @@ while (true)
     {
         foreach (var output in activeOutputs) output.KeepAlive();
 
-        var result = await tournament.CheckIfCurrentGameFinished(page, config);
-        if (result.finished)
+        var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
+        if (messageToChat != null)
         {
-            WriteOutput(activeOutputs, $"Tournament results here: {result.gistUrl}");
-        }
-        else if (!string.IsNullOrEmpty(result.messageToChat))
-        {
-            WriteOutput(activeOutputs, result.messageToChat);
+            WriteOutput(activeOutputs, messageToChat);
         }
     }
     else if (Uri.TryCreate(inputCommand, UriKind.Absolute, out var uri))
@@ -111,8 +107,8 @@ while (true)
     else if (inputCommand.StartsWith("eliminate"))
     {
         var numberOfEliminations = int.TryParse(inputCommand.Split(' ').LastOrDefault(), out var num) ? num : 0;
-        var (url, messageToChat) = await tournament.EliminateAndFinish(page, config, numberOfEliminations);
-        if (messageToChat != null || url != null) WriteOutput(activeOutputs, $"{messageToChat} Tournament results: {url}");
+        var messageToChat = await tournament.EliminateAndFinish(page, config, numberOfEliminations);
+        if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
     }
 }
 
