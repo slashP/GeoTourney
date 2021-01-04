@@ -37,7 +37,6 @@
         .leaflet-popup-tip {
             background-color: #343a40;
             color: white;
-            padding: -6px;
         }
     </style>
 </head>
@@ -49,10 +48,11 @@
 <div class="container-fluid" id="content"></div>
 <script>
     createGlobalNumberIcon();
-    const createIcon = (number) => new L.NumberedDivIcon({ number: number });
+    const createIcon = (number) => new L.NumberedDivIcon({ number: number, iconUrl: "https://i.imgur.com/AuqPKXs.png" });
     const icons = [...Array(200)].map((_, i) => i + 1).map(createIcon);
     let games = [];
     let tournament = null;
+    let filteredPlayerIds = [];
     async function init() {
         const githubUsername = new URL(window.location).host.split('.')[0];
         const id = new URL(window.location).searchParams.get("id");
@@ -66,61 +66,94 @@
         content.innerHTML = tournamentHtml + games.map(createGame).join('');
     }
     init();
+    const renderGameTables = () => {
+        games.forEach(game => {
+            let element = document.getElementById(`game-table-${game.gameNumber}`);
+            element.innerHTML = createGameTable(game);
+        })
+    };
     const numberFormat = new Intl.NumberFormat();
-    let maps = [];
-    const viewRound = (gameNumber, roundNumber) => {
+    let allMaps = [];
+    let lastRoundIndexSelected = [];
+    const viewRound = (gameNumber, roundIndex = 0) => {
+        lastRoundIndexSelected[gameNumber] = roundIndex;
         var game = games.filter(x => x.gameNumber === gameNumber)[0];
-        let guesses = game.allGuesses[roundNumber];
-        guesses.sort((a, b) => b.roundScoreInPoints - a.roundScoreInPoints);
+        let allGuesses = game.allGuesses[roundIndex];
+        allGuesses.sort((a, b) => b.roundScoreInPoints - a.roundScoreInPoints);
+        let guesses = allGuesses.filter(x => filteredPlayerIds.length === 0 || filteredPlayerIds.includes(x.playerId));
         [0, 1, 2, 3, 4].forEach(x => {
-            document.getElementById(`mapid-game-${gameNumber}-round-${x}`).style.display = x === roundNumber ? "" : "none";
+            document.getElementById(`mapid-game-${gameNumber}-round-${x}`).style.display = x === roundIndex ? "" : "none";
             var roundTable = document.getElementById(`table-round-game-${gameNumber}`);
-            roundTable.innerHTML = createRoundTable(guesses, roundNumber);
+            roundTable.innerHTML = createRoundTable(guesses, roundIndex);
             roundTable.style.display = "";
         });
-        const answer = game.answers[roundNumber];
-        if (maps[`${gameNumber}-${roundNumber}`]) {
-            return;
+        const answer = game.answers[roundIndex];
+        var existingMap = allMaps[`${gameNumber}-${roundIndex}`];
+        if (!existingMap) {
+            const map = L.map(`mapid-game-${gameNumber}-round-${roundIndex}`).setView([51.505, -0.09], 2);
+            L.tileLayer(
+                "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
+                {
+                    attribution:
+                        'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                    maxZoom: 18,
+                    id: "mapbox/streets-v11",
+                    tileSize: 512,
+                    zoomOffset: -1,
+                    accessToken:
+                        "pk.eyJ1Ijoic2xhc2hwIiwiYSI6ImNrajc2ejVuMzZna2QydnFqNjg2eGx0cDcifQ.0YrOWeCFuS0URH6E1t3qJg",
+                }
+            ).addTo(map);
+            const markers = [];
+            allGuesses.forEach((guess, index) => {
+                let marker = L.marker([guess.lat, guess.lng],
+                    {
+                        zIndexOffset: allGuesses.length - index,
+                        icon: icons.slice(index)[0] || [...icons].pop(),
+                    });
+                marker.on('mouseover', function (e) {
+                    this.openPopup();
+                });
+                marker.on('mouseout', function (e) {
+                    this.closePopup();
+                });
+                marker.bindPopup(`<b>${guess.playerName}</b><br>${guess.roundScoreInPoints}`).addTo(map);
+                markers.push({ playerId: guess.playerId, playerName: guess.playerName, marker: marker });
+            });
+            L.marker([answer.lat, answer.lng],
+                {
+                    zIndexOffset: allGuesses.length + 100,
+                    icon: new L.NumberedDivIcon({ number: null, iconUrl: "https://i.imgur.com/uS6hKqq.png" }),
+                })
+                .bindPopup(`<a href='https://maps.google.com/maps?q=&layer=c&cbll=${answer.lat},${answer.lng}' target="_blank" rel="noreferrer noopener">Actual location</a>`)
+                .addTo(map);
+            allMaps[`${gameNumber}-${roundIndex}`] = existingMap = { map: map, markers: markers };
         }
 
-        const map = L.map(`mapid-game-${gameNumber}-round-${roundNumber}`).setView([51.505, -0.09], 2);
-        L.tileLayer(
-            "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
-            {
-                attribution:
-                    'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-                maxZoom: 18,
-                id: "mapbox/streets-v11",
-                tileSize: 512,
-                zoomOffset: -1,
-                accessToken:
-                    "pk.eyJ1Ijoic2xhc2hwIiwiYSI6ImNrajc2ejVuMzZna2QydnFqNjg2eGx0cDcifQ.0YrOWeCFuS0URH6E1t3qJg",
-            }
-        ).addTo(map);
-        guesses.forEach((guess, index) => {
-            let marker = L.marker([guess.lat, guess.lng],
-                {
-                    zIndexOffset: guesses.length - index,
-                    icon: icons.slice(index)[0] || [...icons].pop(),
-                });
-            marker.on('mouseover', function (e) {
-                this.openPopup();
+        if (filteredPlayerIds.length === 0) {
+            existingMap.markers.forEach((x, index) => {
+                x.marker.setIcon(icons.slice(index)[0] || [...icons].pop());
+                existingMap.map.addLayer(x.marker);
             });
-            marker.on('mouseout', function (e) {
-                this.closePopup();
+        } else {
+            existingMap.markers.forEach(x => existingMap.map.removeLayer(x.marker));
+            existingMap.markers.filter(x => filteredPlayerIds.includes(x.playerId)).forEach(x => {
+                x.marker.setIcon(createIcon(x.playerName[0]));
+                existingMap.map.addLayer(x.marker);
             });
-            marker.bindPopup(`<b>${guess.playerName}</b><br>${guess.roundScoreInPoints}`).addTo(map);
         }
-        );
-        L.marker([answer.lat, answer.lng],
-            {
-                zIndexOffset: guesses.length + 100,
-                icon: new L.NumberedDivIcon({ number: null, iconUrl: "https://i.imgur.com/uS6hKqq.png" }),
-            })
-            .bindPopup("<b>Actual location</b>")
-            .addTo(map);
-        maps[`${gameNumber}-${roundNumber}`] = map;
+        renderGameTables();
     };
+
+    const togglePlayer = (gameNumber, playerId) => {
+        if (filteredPlayerIds.includes(playerId)) {
+            filteredPlayerIds = filteredPlayerIds.filter(x => x !== playerId);
+        } else {
+            filteredPlayerIds.push(playerId);
+        }
+
+        viewRound(gameNumber, lastRoundIndexSelected[gameNumber]);
+    }
 
     const createRoundRow = (player, index) => `
 <tr>
@@ -132,7 +165,7 @@
 `;
     const createRoundTable = (players, index) => `
 <tr>
-            <th class="text-right">Round position</th>
+            <th class="text-right">#</th>
             <th>Player</th>
             <th class="text-right">Points in round ${index + 1}</th>
             <th class="text-right">Distance</th>
@@ -154,8 +187,10 @@ ${players.map(createRoundRow).join('')}
         }
     }
 
+    const highLightClass = playerGame => filteredPlayerIds.includes(playerGame.playerId) ? "bg-light text-dark" : "";
+
     const createGameRow = (game, playerGame, index) => `
-<tr>
+<tr class="${highLightClass(playerGame)}" onclick="togglePlayer(${game.gameNumber}, '${playerGame.playerId}')">
             <td class="text-right">${index + 1}</td>
             <td class="${eliminationClass(game, playerGame)}" title="${eliminationDescription(game, playerGame)}">${playerGame.player}</td>
 ${game.playedWithEliminations ? `<td class="text-right">${playerGame.eliminatedInGame || ''}</td>` : ''}
@@ -175,11 +210,11 @@ ${game.playedWithEliminations ? `<td class="text-right">${playerGame.eliminatedI
                 <th>Player</th>
                 ${game.playedWithEliminations ? '<th class="text-right">Eliminated in game</th>' : ''}
                 <th class="text-right">Points</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)"><button href="#" class="btn btn-sm btn-outline-primary">R1</button></th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)"><button href="#" class="btn btn-sm btn-outline-primary">R2</button></th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 2)"><button href="#" class="btn btn-sm btn-outline-primary">R3</button></th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)"><button href="#" class="btn btn-sm btn-outline-primary">R4</button></th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)"><button href="#" class="btn btn-sm btn-outline-primary">R5</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)"><button class="btn btn-sm btn-outline-primary">R1</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)"><button class="btn btn-sm btn-outline-primary">R2</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 2)"><button class="btn btn-sm btn-outline-primary">R3</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)"><button class="btn btn-sm btn-outline-primary">R4</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)"><button class="btn btn-sm btn-outline-primary">R5</button></th>
             </tr>
 ${game.playerGames.map((pg, i) => createGameRow(game, pg, i)).join('')}
 </table>
@@ -192,16 +227,16 @@ ${game.playerGames.map((pg, i) => createGameRow(game, pg, i)).join('')}
     </div>
 </div>
 <div class="row">
-            <div class="col-5">
+            <div id="game-table-${game.gameNumber}" class="col-5">
                 ${createGameTable(game)}
             </div>
-            <div class="row col-7">
+            <div class="col-7">
                 <div class="map col-12" id="mapid-game-${game.gameNumber}-round-0" style="display: none;"></div>
                 <div class="map col-12" id="mapid-game-${game.gameNumber}-round-1" style="display: none;"></div>
                 <div class="map col-12" id="mapid-game-${game.gameNumber}-round-2" style="display: none;"></div>
                 <div class="map col-12" id="mapid-game-${game.gameNumber}-round-3" style="display: none;"></div>
                 <div class="map col-12" id="mapid-game-${game.gameNumber}-round-4" style="display: none;"></div>
-                <table class="table table-dark table-sm col-6" id="table-round-game-${game.gameNumber}"></table>
+                <table class="table table-dark table-sm col-7 my-4" id="table-round-game-${game.gameNumber}"></table>
             </div>
 </div>
 `;
@@ -230,7 +265,7 @@ ${tournament.players.map(createTournamentTableRow).join('')}
     function createGlobalNumberIcon() {
         L.NumberedDivIcon = L.Icon.extend({
             options: {
-                iconUrl: 'https://i.imgur.com/AuqPKXs.png',
+                iconUrl: '',
                 number: '',
                 shadowUrl: null,
                 iconSize: new L.Point(21, 25),
@@ -250,11 +285,6 @@ ${tournament.players.map(createTournamentTableRow).join('')}
                 div.appendChild(numdiv);
                 this._setIconStyles(div, 'icon');
                 return div;
-            },
-
-            //you could change this to add a shadow like in the normal marker if you really wanted
-            createShadow: function () {
-                return null;
             }
         });
     }

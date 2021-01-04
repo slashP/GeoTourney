@@ -13,7 +13,7 @@ using PuppeteerSharp;
 try
 {
     var name = typeof(GeoTournament).Assembly.GetName();
-    Console.WriteLine($"Starting {name.Name} {GetVersion()}");
+    Console.WriteLine($"Starting {name.Name} {GeoTourney.Extensions.GetVersion()}");
     GeoTournament tournament = new();
     var config = new ConfigurationBuilder()
         .SetBasePath(Directory.GetCurrentDirectory())
@@ -123,7 +123,7 @@ catch (Exception e)
     Console.WriteLine("The application will stop and needs to be started again. Press any key to close.");
     try
     {
-        await File.AppendAllTextAsync("errors.txt", $"{DateTime.UtcNow:s}: {GetVersion()}{Environment.NewLine}{e}{Environment.NewLine}");
+        await File.AppendAllTextAsync("errors.txt", $"{DateTime.UtcNow:s}: {GeoTourney.Extensions.GetVersion()}{Environment.NewLine}{e}{Environment.NewLine}");
     }
     catch (Exception)
     {
@@ -142,11 +142,4 @@ static void OnMessageReceived(object? sender, string e)
 static void WriteOutput(IEnumerable<IGameEventOutput> activeOutputs, string message)
 {
     foreach (var output in activeOutputs) output.Write(message);
-}
-
-static string GetVersion()
-{
-    var name = typeof(GeoTournament).Assembly.GetName();
-    var version = name.Version;
-    return $"v.{version?.Major}.{version?.Minor}.{version?.Build}";
 }

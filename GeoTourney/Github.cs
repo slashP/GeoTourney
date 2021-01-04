@@ -27,9 +27,14 @@ namespace GeoTourney
             var owner = user.Login.ToLower();
             var repoName = $"{owner}.github.io";
             var repo = await CreateRepositoryIfNotExists(client, owner, repoName);
-
-            var githubHtmlFilePath = "geoguessr/v4.7/tournament.html";
-            await CreateFileIfNotExists(client, repo, EmbeddedFileHelper.Content("htmlTemplate.html"), githubHtmlFilePath, "File change.");
+            var content = EmbeddedFileHelper.Content("htmlTemplate.html");
+            var localSuffix = string.Empty;
+#if DEBUG
+            localSuffix = $"-{Extensions.ShortHash(content)}";
+#endif
+            var version = Extensions.GetVersion();
+            var githubHtmlFilePath = $"geoguessr/{version}{localSuffix}/tournament.html";
+            await CreateFileIfNotExists(client, repo, content, githubHtmlFilePath, "File change.");
             var id = DateTime.Now.Ticks.ToString();
             var path = $"geoguessr/{id}.json";
             await CreateFileIfNotExists(client, repo, fileContent, path, "Geoguessr tournament.");

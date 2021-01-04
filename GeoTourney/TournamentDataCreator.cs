@@ -18,6 +18,7 @@ namespace GeoTourney
                             new PlayerInRound
                             {
                                 playerName = p.playerName,
+                                playerId = p.userId,
                                 roundScoreInPoints = p.game.player.guesses[i].roundScoreInPoints,
                                 distanceInMeters = p.game.player.guesses[i].distanceInMeters,
                                 lat = p.game.player.guesses[i].lat,
@@ -26,6 +27,7 @@ namespace GeoTourney
                     playerGames = x.PlayerGames.Select(pg => new
                     {
                         player = pg.playerName,
+                        playerId = pg.userId,
                         points = pg.totalScore,
                         r1 = pg.game.player.guesses.Skip(0).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r2 = pg.game.player.guesses.Skip(1).FirstOrDefault()?.roundScoreInPoints ?? 0,
@@ -87,6 +89,7 @@ namespace GeoTourney
     public class PlayerInRound
     {
         public string playerName { get; set; } = string.Empty;
+        public string playerId { get; set; } = string.Empty;
         public int roundScoreInPoints { get; set; }
         public decimal distanceInMeters { get; set; }
         public decimal lat { get; set; }
