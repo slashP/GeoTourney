@@ -120,14 +120,15 @@
                 marker.bindPopup(`<b>${guess.playerName}</b><br>${guess.roundScoreInPoints}`).addTo(map);
                 markers.push({ playerId: guess.playerId, playerName: guess.playerName, marker: marker });
             });
-            L.marker([answer.lat, answer.lng],
+            var answerMarker = L.marker([answer.lat, answer.lng],
                 {
                     zIndexOffset: allGuesses.length + 100,
                     icon: new L.NumberedDivIcon({ number: null, iconUrl: "https://i.imgur.com/uS6hKqq.png" }),
-                })
+                });
+            answerMarker
                 .bindPopup(`<a href='https://maps.google.com/maps?q=&layer=c&cbll=${answer.lat},${answer.lng}' target="_blank" rel="noreferrer noopener">Actual location</a>`)
                 .addTo(map);
-            allMaps[`${gameNumber}-${roundIndex}`] = existingMap = { map: map, markers: markers };
+            allMaps[`${gameNumber}-${roundIndex}`] = existingMap = { map: map, markers: markers, answerMarker: answerMarker };
         }
 
         if (filteredPlayerIds.length === 0) {
@@ -135,12 +136,15 @@
                 x.marker.setIcon(icons.slice(index)[0] || [...icons].pop());
                 existingMap.map.addLayer(x.marker);
             });
+            existingMap.map.fitBounds(new L.featureGroup(existingMap.markers.map(x => x.marker).concat([existingMap.answerMarker])).getBounds());
         } else {
             existingMap.markers.forEach(x => existingMap.map.removeLayer(x.marker));
-            existingMap.markers.filter(x => filteredPlayerIds.includes(x.playerId)).forEach(x => {
+            var filteredMarkers = existingMap.markers.filter(x => filteredPlayerIds.includes(x.playerId));
+            filteredMarkers.forEach(x => {
                 x.marker.setIcon(createIcon(x.playerName[0]));
                 existingMap.map.addLayer(x.marker);
             });
+            existingMap.map.fitBounds(new L.featureGroup(filteredMarkers.map(x => x.marker).concat([existingMap.answerMarker])).getBounds());
         }
         renderGameTables();
     };
