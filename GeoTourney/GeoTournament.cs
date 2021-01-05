@@ -43,24 +43,17 @@ namespace GeoTourney
             return null;
         }
 
-        static IEnumerable<(string userId, int? points)> EliminationPossibilities(PlayerGame[] currentGame, List<GameObject> games)
+        static IEnumerable<(string userId, int? points)> EliminationPossibilities(IReadOnlyCollection<PlayerGame> currentGame, List<GameObject> games)
         {
-            var allPlayerIdsInAllGames = games.Select(x => x.PlayerGames.Select(y => y.userId)).Concat(new[] { currentGame.Select(y => y.userId) }.AsEnumerable()).ToArray();
-            var userIdsThatPlayedAllGames = allPlayerIdsInAllGames
-                .Aggregate((previousList, nextList) => previousList.Intersect(nextList)).ToArray();
-            var userIdsThatDidntPlayAllGames = allPlayerIdsInAllGames.SelectMany(x => x).Except(userIdsThatPlayedAllGames).ToArray();
-            foreach (var playerGames in games.SelectMany(x => x.PlayerGames).Concat(currentGame).Where(x => userIdsThatDidntPlayAllGames.Contains(x.userId))
-                .GroupBy(x => x.userId).OrderBy(x => x.Sum(y => y.totalScore)))
-            {
-                var userId = playerGames.Key;
-                if (GetEliminationStatus(games, userId) == EliminationStatus.StillInTheGame
-                ) // Did not play all rounds, but is still in the tournament.
+            var allPlayerIdsInAllGames = games.SelectMany(x => x.PlayerGames.Select(y => y.userId))
+                .Concat(currentGame.Select(y => y.userId)).Distinct().ToList();
+            var eliminationPossibilities = allPlayerIdsInAllGames.Select(x => new
                 {
-                    yield return (userId, null);
-                }
-            }
-
-            var eliminationPossibilities = currentGame.Where(x => GetEliminationStatus(games, x.userId) == EliminationStatus.StillInTheGame)
+                    userId = x,
+                    status = GetEliminationStatus(games, x),
+                    totalScore = currentGame.FirstOrDefault(y => y.userId == x)?.totalScore
+                }).Where(x => x.status == EliminationStatus.StillInTheGame ||
+                              x.status == EliminationStatus.Revived)
                 .OrderBy(x => x.totalScore).ToList();
             foreach (var eliminationPossibility in eliminationPossibilities)
             {
@@ -70,13 +63,16 @@ namespace GeoTourney
 
         async Task<string> FinishGame(IConfiguration config, PlayerGame[] playerGames, List<string> userIdsEliminated)
         {
+            var eliminationStatuses = Games.SelectMany(x => x.PlayerGames.Select(y => y.userId))
+                .Concat(playerGames.Select(y => y.userId)).Distinct().ToDictionary(id => id,
+                    id => NewEliminationStatus(userIdsEliminated, id));
             var newGame = new GameObject
             {
                 GameUrl = new Uri($"https://www.geoguessr.com/results/{CurrentGameId}"),
                 GameNumber = Games.Count + 1,
                 MapName = playerGames.First().game.mapName,
                 PlayerGames = playerGames,
-                UserIdsEliminated = userIdsEliminated,
+                EliminationStatuses = eliminationStatuses,
                 PlayedWithEliminations = PlayWithEliminations
             };
             Games.Add(newGame);
@@ -86,6 +82,14 @@ namespace GeoTourney
 
             var url = await GenerateUrlToLatestTournamentInfo(Games.ToList(), config);
             return $"Game #{newGame.GameNumber} finished. {url}";
+        }
+
+        EliminationStatus NewEliminationStatus(List<string> userIdsEliminated, string id)
+        {
+            if (userIdsEliminated.Contains(id))
+                return EliminationStatus.Eliminated;
+            var status = GetEliminationStatus(Games, id);
+            return status == EliminationStatus.Revived ? EliminationStatus.StillInTheGame : status;
         }
 
         public async Task<string?> CheckIfCurrentGameFinished(Page page, IConfiguration config)
@@ -130,6 +134,111 @@ namespace GeoTourney
             var eliminees = eliminationPossibilities.Take(numberOfEliminations).ToList();
             var url = await FinishGame(config, playerGames, eliminees.Select(x => x.userId).ToList());
             return $"{numberOfEliminations} players eliminated. {url}";
+        }
+
+        public async Task<string?> EliminateSpecificPlayer(string playerSearchTerm, IConfiguration config)
+        {
+            var currentGame = Games.LastOrDefault();
+            if (currentGame == null)
+            {
+                return null;
+            }
+
+            var (match, error) = MatchingPlayerOrError(playerSearchTerm);
+            if (error != null || match == null)
+            {
+                return error;
+            }
+
+            var currentEliminationStatus = currentGame.EliminationStatuses[match.Value.userId];
+            switch (currentEliminationStatus)
+            {
+                case EliminationStatus.DidNotPlayGame1:
+                    return $"{match.Value.playerName} did not play game 1 and is therefore not considered to be in the tournament.";
+                case EliminationStatus.Eliminated:
+                {
+                    var gameNumber = GameWhenPlayerWasEliminated(Games, match.Value.userId, currentGame.GameNumber)?.GameNumber;
+                    return $"{match.Value.playerName} was already eliminated in game #{gameNumber}.";
+                }
+                case EliminationStatus.Revived:
+                case EliminationStatus.StillInTheGame:
+                {
+                    currentGame.EliminationStatuses[match.Value.userId] = EliminationStatus.Eliminated;
+                    var url = await GenerateUrlToLatestTournamentInfo(Games, config);
+                    return $"{match.Value.playerName} eliminated. {url}";
+                }
+                default: throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        public async Task<string?> ReviveSpecificPlayer(string playerSearchTerm, IConfiguration config)
+        {
+            var currentGame = Games.LastOrDefault();
+            if (currentGame == null)
+            {
+                return null;
+            }
+
+            var (match, error) = MatchingPlayerOrError(playerSearchTerm);
+            if (error != null || match == null)
+            {
+                return error;
+            }
+
+            var currentEliminationStatus = currentGame.EliminationStatuses[match.Value.userId];
+            switch (currentEliminationStatus)
+            {
+                case EliminationStatus.DidNotPlayGame1:
+                case EliminationStatus.Eliminated:
+                {
+                    currentGame.EliminationStatuses[match.Value.userId] = EliminationStatus.Revived;
+                    var url = await GenerateUrlToLatestTournamentInfo(Games, config);
+                    return $"{match.Value.playerName} revived. {url}";
+                }
+                case EliminationStatus.Revived:
+                    return $"{match.Value.playerName} was already revived.";
+                case EliminationStatus.StillInTheGame:
+                    return $"{match.Value.playerName} was still in the game.";
+                default: throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        ((string userId, string playerName)?, string? error) MatchingPlayerOrError(string playerSearchTerm)
+        {
+            var matches = MatchingPlayers(playerSearchTerm);
+            if (!matches.Any())
+            {
+                return (null, $"No matching player found for '{playerSearchTerm}'");
+            }
+
+            if (matches.Count != 1)
+            {
+                return (null, $"More than one match found. Narrow down the search. '{playerSearchTerm}' |> {string.Join(", ", matches.Take(2).Select(x => x.playerName))}");
+            }
+
+            var (userId, playerName) = matches.Single();
+
+            return ((userId, playerName), null);
+        }
+
+        public static GameObject? GameWhenPlayerWasEliminated(IEnumerable<GameObject> games, string userId, int fromGame)
+        {
+            return games.Where(x => x.GameNumber <= fromGame).OrderByDescending(x => x.GameNumber)
+                    .SkipWhile(x => x.EliminationStatuses.TryGetValue(userId, out var status) && status != EliminationStatus.Eliminated)
+                    .TakeWhile(x => x.EliminationStatuses.TryGetValue(userId, out var status) && status == EliminationStatus.Eliminated)
+                .LastOrDefault();
+        }
+
+        List<(string userId, string playerName)> MatchingPlayers(string playerSearchTerm)
+        {
+            var searchTermIsPointsSearch = int.TryParse(playerSearchTerm, out var numberOfPointsSearch);
+            var pointSearchMatches = searchTermIsPointsSearch
+                ? Games.Last().PlayerGames.Where(x => x.totalScore == numberOfPointsSearch)
+                : Enumerable.Empty<PlayerGame>();
+            var nameSearchMatches = Games.SelectMany(x => x.PlayerGames).Where(x =>
+                x.playerName.Contains(playerSearchTerm, StringComparison.InvariantCultureIgnoreCase));
+            var matches = pointSearchMatches.Concat(nameSearchMatches);
+            return matches.GroupBy(x => x.userId).Select(x => (x.Key, x.Last().playerName)).ToList();
         }
 
         static async Task<string> GenerateUrlToLatestTournamentInfo(List<GameObject> games, IConfiguration configuration)
@@ -182,29 +291,25 @@ namespace GeoTourney
 
         public static EliminationStatus GetEliminationStatus(IReadOnlyCollection<GameObject> games, string userId)
         {
-            if (games.FirstOrDefault()?.PlayerGames.Any(x => x.userId == userId) == false)
+            if (!games.Any())
+            {
+                return EliminationStatus.StillInTheGame;
+            }
+
+            if (games.Count == 1 && games.FirstOrDefault()?.PlayerGames.Any(x => x.userId == userId) == false)
             {
                 return EliminationStatus.DidNotPlayGame1;
             }
 
-            return games.SelectMany(y => y.UserIdsEliminated).Contains(userId)
-                ? EliminationStatus.Eliminated
-                : EliminationStatus.StillInTheGame;
-        }
-
-        static string EliminatedInGameDescription(IReadOnlyCollection<GameObject> games, string userId)
-        {
-            return GetEliminationStatus(games, userId) == EliminationStatus.DidNotPlayGame1
-                ? "-"
-                : games.FirstOrDefault(g => g.UserIdsEliminated.Contains(userId))?.GameNumber.ToString() ??
-                  string.Empty;
+            var previousStatus = games.Reverse().SelectMany(y => y.EliminationStatuses).FirstOrDefault(x => x.Key == userId).Value;
+            return previousStatus;
         }
 
         public record GameObject
         {
             public int GameNumber { get; set; }
             public PlayerGame[] PlayerGames { get; set; } = Array.Empty<PlayerGame>();
-            public List<string> UserIdsEliminated { get; set; } = new();
+            public Dictionary<string, EliminationStatus> EliminationStatuses { get; set; } = new();
             public string MapName { get; set; } = string.Empty;
             public Uri? GameUrl { get; set; }
             public bool PlayedWithEliminations { get; set; }
@@ -255,6 +360,7 @@ namespace GeoTourney
     {
         DidNotPlayGame1,
         Eliminated,
+        Revived,
         StillInTheGame
     }
 

@@ -108,10 +108,21 @@ try
             await Task.Delay(TimeSpan.FromSeconds(2));
             if(message != null) WriteOutput(activeOutputs, message);
         }
-        else if (inputCommand.StartsWith("eliminate"))
+        else if (int.TryParse(inputCommand, out var number) && number >= 0)
         {
-            var numberOfEliminations = int.TryParse(inputCommand.Split(' ').LastOrDefault(), out var num) ? num : 0;
-            var messageToChat = await tournament.EliminateAndFinish(page, config, numberOfEliminations);
+            var messageToChat = await tournament.EliminateAndFinish(page, config, number);
+            if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+        }
+        else if (inputCommand.StartsWith("elim "))
+        {
+            var playerSearchTerm = inputCommand.Skip("elim ".Length).AsString();
+            var messageToChat = await tournament.EliminateSpecificPlayer(playerSearchTerm, config);
+            if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+        }
+        else if (inputCommand.StartsWith("revive "))
+        {
+            var playerSearchTerm = inputCommand.Skip("revive ".Length).AsString();
+            var messageToChat = await tournament.ReviveSpecificPlayer(playerSearchTerm, config);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
         }
     }
@@ -136,7 +147,7 @@ static void OnMessageReceived(object? sender, string e)
     if (e?.StartsWith("https://www.geoguessr.com/challenge") ?? false)
         ReadConsole.QueueCommand(e);
     else if (e?.StartsWith("!") ?? false) ReadConsole.QueueCommand(new string(e.Skip(1).ToArray()));
-    else if(int.TryParse(e, out var number) && number >= 0) ReadConsole.QueueCommand($"eliminate {number}");
+    else if(int.TryParse(e, out var number) && number >= 0) ReadConsole.QueueCommand(number.ToString());
 }
 
 static void WriteOutput(IEnumerable<IGameEventOutput> activeOutputs, string message)

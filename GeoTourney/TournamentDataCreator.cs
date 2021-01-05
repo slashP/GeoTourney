@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 
@@ -8,7 +9,7 @@ namespace GeoTourney
     {
         public static string GenerateJsData(List<GeoTournament.GameObject> g, bool includeTotalScore)
         {
-            var games = g.OrderByDescending(x => x.GameNumber).Select(x =>
+            var games = g.Select(x =>
             {
                 var game = x.PlayerGames.First().game;
                 return new
@@ -34,7 +35,7 @@ namespace GeoTourney
                         r3 = pg.game.player.guesses.Skip(2).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r4 = pg.game.player.guesses.Skip(3).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r5 = pg.game.player.guesses.Skip(4).FirstOrDefault()?.roundScoreInPoints ?? 0,
-                        eliminatedInGame = EliminatedInGameDescription(g, pg.userId)
+                        eliminatedInGame = EliminatedInGameDescription(g, x, pg.userId)
                     }).ToList(),
                     answers = game.rounds.Select(x => new { x.lat, x.lng }).ToArray(),
                     mapName = game.mapName,
@@ -43,7 +44,7 @@ namespace GeoTourney
                     gameDescription = GameDescription(x.PlayerGames.First().game),
                     playedWithEliminations = x.PlayedWithEliminations
                 };
-            });
+            }).OrderByDescending(x => x.gameNumber);
             var tournament = includeTotalScore ? new
             {
                 players = g.SelectMany(x => x.PlayerGames).GroupBy(x => x.userId).Select(x => new
@@ -77,12 +78,20 @@ namespace GeoTourney
             return game.timeLimit.HasValue ? $"{game.timeLimit} sec. {restrictions}" : restrictions;
         }
 
-        static string? EliminatedInGameDescription(IReadOnlyCollection<GeoTournament.GameObject> games, string userId)
+        static string? EliminatedInGameDescription(
+            IReadOnlyCollection<GeoTournament.GameObject> games,
+            GeoTournament.GameObject thisGame,
+            string userId)
         {
-            return GeoTournament.GetEliminationStatus(games, userId) == EliminationStatus.DidNotPlayGame1
-                ? "-"
-                : games.FirstOrDefault(g => g.UserIdsEliminated.Contains(userId))?.GameNumber.ToString() ??
-                  null;
+            var statusThisGame = thisGame.EliminationStatuses[userId];
+            return statusThisGame switch
+            {
+                EliminationStatus.Revived => "+",
+                EliminationStatus.Eliminated => GeoTournament.GameWhenPlayerWasEliminated(games, userId, thisGame.GameNumber)?.GameNumber.ToString(),
+                EliminationStatus.DidNotPlayGame1 => "-",
+                EliminationStatus.StillInTheGame => null,
+                _ => null
+            };
         }
     }
 

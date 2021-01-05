@@ -21,6 +21,8 @@ namespace GeoTourney
             }
         }
 
+        public static string AsString(this IEnumerable<char> characters) => new(characters.ToArray());
+
         public static string GetVersion()
         {
             var name = typeof(GeoTournament).Assembly.GetName();

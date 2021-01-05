@@ -176,10 +176,17 @@
 </tr>
 ${players.map(createRoundRow).join('')}
 `;
-    const eliminationClass = (game, playerGame) => game.playedWithEliminations ?
-        playerGame.eliminatedInGame === null || playerGame.eliminatedInGame > game.gameNumber ?
-            'text-success' : playerGame.eliminatedInGame === '-'
-                ? 'text-muted' : playerGame.eliminatedInGame === game.gameNumber.toString() ? 'text-danger' : 'text-warning' : '';
+    const eliminationClass = (game, playerGame) => {
+        if (!game.playedWithEliminations) return '';
+        if (playerGame.eliminatedInGame > game.gameNumber) return 'text-success';
+        if (playerGame.eliminatedInGame == game.gameNumber.toString()) return 'text-danger';
+        switch (playerGame.eliminatedInGame) {
+            case "-": return 'text-muted';
+            case "+": return 'text-primary';
+            case null: return 'text-success';
+            default: return 'text-warning';
+        }
+    }
 
     const eliminationDescription = (game, playerGame) => {
         switch (eliminationClass(game, playerGame)) {
@@ -187,6 +194,7 @@ ${players.map(createRoundRow).join('')}
             case "text-warning": return "Eliminated in previous game.";
             case "text-danger": return "Eliminated in this game.";
             case "text-muted": return "Did not play game #1.";
+            case "text-primary": return "Revived in this game.";
             default: return "";
         }
     }
