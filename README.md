@@ -50,6 +50,14 @@ This is the Twitch account the application will send chat messages on behalf of.
   * `!totalscore` to get a results page with all games and points summed.
   * `!restart` to forget current tournament and start over.
   * `!elim` to toggle elimination mode on/off.
+  * `!elim slashpeek` to eliminate user `slashpeek`.
+  * `!elim 22138` to eliminate the user with 22138 points in the last game.
+  * `!revive slashpeek` to revive user `slashpeek`.
+  * `!revive 8796` to revive user with 8796 points in the last game.
+  * `!elim less than N` to eliminate all players with less than N points in the last game.
+  * `!elim more than N` to eliminate all players with more than N points in the last game.
+  * `!revive less than N` to revive all players with less than N points in the last game.
+  * `!revive more than N` to revive all players with more than N points in the last game.
 
 ![Gameplay in action](setup/game_in_action.png "Gameplay in action")
 

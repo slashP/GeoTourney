@@ -8,6 +8,8 @@ namespace GeoTourney
 {
     public static class Extensions
     {
+        public static int IntFromString(string inputCommand) => int.Parse(inputCommand.Where(char.IsDigit).AsString());
+
         public static IEnumerable<TSource> DistinctBy<TSource, TKey>
             (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
         {
@@ -22,6 +24,8 @@ namespace GeoTourney
         }
 
         public static string AsString(this IEnumerable<char> characters) => new(characters.ToArray());
+
+        public static string Pluralize(this string text) => text?.Length == 1 ? text : $"{text}s";
 
         public static string GetVersion()
         {

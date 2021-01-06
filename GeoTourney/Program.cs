@@ -3,13 +3,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using GeoTourney;
 using Microsoft.Extensions.Configuration;
 using PuppeteerSharp;
+using Extensions = GeoTourney.Extensions;
 
 // https://www.geoguessr.com/challenge/4AIgheuBiawHesVD
 // https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr
+Regex lessOrMoreThanRegex = new(@"^(elim|revive) (less|more) (than|then) (\d{1,5}?)$");
+Regex lessOrMoreThanFinishGameRegex = new(@"^(less|more) (than|then) (\d{1,5}?)$");
 try
 {
     var name = typeof(GeoTournament).Assembly.GetName();
@@ -83,9 +87,8 @@ try
         }
         else if (Uri.TryCreate(inputCommand, UriKind.Absolute, out var uri))
         {
-            await tournament.SetCurrentGame(uri, page, config);
-            var currentGameNumber = (tournament.Games.OrderByDescending(x => x.GameNumber).FirstOrDefault()?.GameNumber ?? 0) + 1;
-            WriteOutput(activeOutputs, $"Game #{currentGameNumber}: {uri}");
+            var messageToChat = await tournament.SetCurrentGame(uri, page, config);
+            if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
         }
         else if (inputCommand == "restart")
         {
@@ -113,6 +116,16 @@ try
             var messageToChat = await tournament.EliminateAndFinish(page, config, number);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
         }
+        else if (lessOrMoreThanRegex.IsMatch(inputCommand))
+        {
+            var isEliminationAction = inputCommand.Contains("elim", StringComparison.InvariantCultureIgnoreCase);
+            var points = Extensions.IntFromString(inputCommand);
+            var pointsDescription = inputCommand.Contains("less", StringComparison.InvariantCultureIgnoreCase) ? PointsDescription.LessThan : PointsDescription.MoreThan;
+            var messageToChat = isEliminationAction
+                ? await tournament.EliminatePlayers(pointsDescription, points, config)
+                : await tournament.RevivePlayers(pointsDescription, points, config);
+            if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+        }
         else if (inputCommand.StartsWith("elim "))
         {
             var playerSearchTerm = inputCommand.Skip("elim ".Length).AsString();
@@ -123,6 +136,13 @@ try
         {
             var playerSearchTerm = inputCommand.Skip("revive ".Length).AsString();
             var messageToChat = await tournament.ReviveSpecificPlayer(playerSearchTerm, config);
+            if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+        }
+        else if (lessOrMoreThanFinishGameRegex.IsMatch(inputCommand))
+        {
+            var points = Extensions.IntFromString(inputCommand);
+            var pointsDescription = inputCommand.Contains("less", StringComparison.InvariantCultureIgnoreCase) ? PointsDescription.LessThan : PointsDescription.MoreThan;
+            var messageToChat = await tournament.EliminateAndFinish(page, pointsDescription, points, config);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
         }
     }

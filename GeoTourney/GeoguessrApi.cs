@@ -11,9 +11,9 @@ namespace GeoTourney
     public class GeoguessrApi
     {
         static int ErrorMessageCount;
-        static readonly Dictionary<string, GeoTournament.PlayerGame[]> _games = new();
+        static readonly Dictionary<string, List<GeoTournament.PlayerGame>> _games = new();
 
-        public static async Task<(string? error, GeoTournament.PlayerGame[] playerGames)> LoadGame(string gameId, Page page, IConfiguration config)
+        public static async Task<(string? error, IReadOnlyCollection<GeoTournament.PlayerGame> playerGames)> LoadGame(string gameId, Page page, IConfiguration config)
         {
             var cookies = await page.GetCookiesAsync("https://www.geoguessr.com");
             var isSignedIn = cookies.Any(x => x.Name == "_ncfa");
@@ -23,20 +23,29 @@ namespace GeoTourney
                 return (errorMessage, Array.Empty<GeoTournament.PlayerGame>());
             }
 
-            if (_games.TryGetValue(gameId, out var games))
+            if (_games.TryGetValue(gameId, out var cachedGames))
             {
-                return (null, games);
+                return (null, cachedGames);
             }
 
-            await page.GoToAsync($"https://www.geoguessr.com/api/v3/results/scores/{gameId}/0/10000");
-            var content = await page.MainFrame.GetContentAsync();
-            var jsonString = new string(content.SkipWhile(x => x != '[' && x != '{').TakeWhile(x => x != '<').ToArray());
-            if (WasNotAllowed(jsonString))
+            var playerGames = new List<GeoTournament.PlayerGame>();
+            List<GeoTournament.PlayerGame> games;
+            var maxItems = 50;
+            do
             {
-                return (null, Array.Empty<GeoTournament.PlayerGame>());
-            }
+                await page.GoToAsync($"https://www.geoguessr.com/api/v3/results/scores/{gameId}/{playerGames.Count}/{maxItems}");
+                var content = await page.MainFrame.GetContentAsync();
+                var jsonString =
+                    new string(content.SkipWhile(x => x != '[' && x != '{').TakeWhile(x => x != '<').ToArray());
+                if (WasNotAllowed(jsonString))
+                {
+                    return (null, Array.Empty<GeoTournament.PlayerGame>());
+                }
 
-            var playerGames = JsonSerializer.Deserialize<GeoTournament.PlayerGame[]>(jsonString) ?? Array.Empty<GeoTournament.PlayerGame>();
+                games = JsonSerializer.Deserialize<List<GeoTournament.PlayerGame>>(jsonString) ?? new List<GeoTournament.PlayerGame>();
+                playerGames.AddRange(games);
+            } while (games.Count == maxItems);
+
             _games.Add(gameId, playerGames);
             return (null, playerGames);
         }
