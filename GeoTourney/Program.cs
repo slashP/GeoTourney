@@ -47,7 +47,7 @@ try
     if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampleTournamentPath))
     {
         var url = await Github.UploadTournamentData(config, await File.ReadAllTextAsync(localExampleTournamentPath));
-        await Clip.SetText(url);
+        await Clip.SetText(url, "Copied to clipboard");
     }
 
     await BrowserSetup.Initiate();
@@ -144,6 +144,24 @@ try
             var pointsDescription = inputCommand.Contains("less", StringComparison.InvariantCultureIgnoreCase) ? PointsDescription.LessThan : PointsDescription.MoreThan;
             var messageToChat = await tournament.EliminateAndFinish(page, pointsDescription, points, config);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+        }
+        else if (inputCommand.StartsWith("game"))
+        {
+            var parts = inputCommand.Split(' ');
+            var mapKey = parts.Skip(1).FirstOrDefault();
+            var timeDescription = parts.Skip(2).FirstOrDefault();
+            var gameModeDescription = parts.Skip(3).FirstOrDefault();
+            var (error, link) = await GeoguessrChallenge.Create(page, config, mapKey, timeDescription, gameModeDescription);
+            if (error != null)
+            {
+                WriteOutput(activeOutputs, error);
+            }
+
+            if (link != null)
+            {
+                var messageToChat = await tournament.SetCurrentGame(new Uri(link), page, config);
+                if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+            }
         }
     }
 }

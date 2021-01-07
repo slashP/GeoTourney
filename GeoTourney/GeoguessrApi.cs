@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 
 namespace GeoTourney
@@ -15,12 +17,10 @@ namespace GeoTourney
 
         public static async Task<(string? error, IReadOnlyCollection<GeoTournament.PlayerGame> playerGames)> LoadGame(string gameId, Page page, IConfiguration config)
         {
-            var cookies = await page.GetCookiesAsync("https://www.geoguessr.com");
-            var isSignedIn = cookies.Any(x => x.Name == "_ncfa");
-            if (!isSignedIn)
+            var error = await VerifySignedIn(page, config);
+            if (error != null)
             {
-                var errorMessage = ++ErrorMessageCount > 3 ? null : $"@{config[TwitchClient.TwitchChannelConfigKey]} You have not signed in to https://www.geoguessr.com correctly.";
-                return (errorMessage, Array.Empty<GeoTournament.PlayerGame>());
+                return (error, Array.Empty<GeoTournament.PlayerGame>());
             }
 
             if (_games.TryGetValue(gameId, out var cachedGames))
@@ -33,10 +33,7 @@ namespace GeoTourney
             var maxItems = 50;
             do
             {
-                await page.GoToAsync($"https://www.geoguessr.com/api/v3/results/scores/{gameId}/{playerGames.Count}/{maxItems}");
-                var content = await page.MainFrame.GetContentAsync();
-                var jsonString =
-                    new string(content.SkipWhile(x => x != '[' && x != '{').TakeWhile(x => x != '<').ToArray());
+                var jsonString = await GoToUrlAndGetJsonString(page, $"https://www.geoguessr.com/api/v3/results/scores/{gameId}/{playerGames.Count}/{maxItems}");
                 if (WasNotAllowed(jsonString))
                 {
                     return (null, Array.Empty<GeoTournament.PlayerGame>());
@@ -48,6 +45,75 @@ namespace GeoTourney
 
             _games.Add(gameId, playerGames);
             return (null, playerGames);
+        }
+
+        public static async Task<(string? error, string? link)> GenerateChallengeLink(Page page, IConfiguration config, ushort timeLimit, GameMode gameMode, string mapId)
+        {
+            var error = await VerifySignedIn(page, config);
+            if (error != null)
+            {
+                return (error, null);
+            }
+
+            try
+            {
+                var challengeApiUrl = $"https://www.geoguessr.com/api/v3/challenges";
+                var forbidMoving = gameMode switch
+                {
+                    GameMode.NoMove or GameMode.NMPZ => true,
+                    _ => false
+                };
+                var forbidZooming = gameMode switch
+                {
+                    GameMode.NMPZ => true,
+                    _ => false
+                };
+                var forbidRotating = gameMode switch
+                {
+                    GameMode.NMPZ => true,
+                    _ => false
+                };
+                var requestBody = JsonSerializer.Serialize(new
+                {
+                    map = mapId,
+                    isCountryStreak = false,
+                    roundTime = 0,
+                    forbidMoving = forbidMoving,
+                    forbidZooming = forbidZooming,
+                    forbidRotating = forbidRotating,
+                    timeLimit = timeLimit
+                });
+                var script = $@"fetch('{challengeApiUrl}', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({requestBody})}}).then(response => response.json()).then(x => x.token)";
+                var result = await page.EvaluateExpressionAsync<string>(script);
+                return (null, $"https://www.geoguessr.com/challenge/{result}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return ("Unexpected error.", null);
+            }
+        }
+
+        static async Task<string> GoToUrlAndGetJsonString(Page page, string url)
+        {
+            await page.GoToAsync(url);
+            var content = await page.MainFrame.GetContentAsync();
+            var jsonString =
+                new string(content.SkipWhile(x => x != '[' && x != '{').TakeWhile(x => x != '<').ToArray());
+            return jsonString;
+        }
+
+        static async Task<string?> VerifySignedIn(Page page, IConfiguration config)
+        {
+            var cookies = await page.GetCookiesAsync("https://www.geoguessr.com");
+            var isSignedIn = cookies.Any(x => x.Name == "_ncfa");
+            if (!isSignedIn)
+            {
+                var errorMessage = ++ErrorMessageCount > 3 ? null : $"@{config[TwitchClient.TwitchChannelConfigKey]} You have not signed in to https://www.geoguessr.com correctly.";
+                return errorMessage;
+            }
+
+            return null;
         }
 
         static bool WasNotAllowed(string json)
@@ -66,6 +132,14 @@ namespace GeoTourney
         record ErrorModel
         {
             public string? message { get; set; }
+        }
+
+        public enum GameMode
+        {
+            Invalid,
+            Move,
+            NoMove,
+            NMPZ
         }
     }
 }

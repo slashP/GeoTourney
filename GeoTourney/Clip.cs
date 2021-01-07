@@ -6,12 +6,12 @@ namespace GeoTourney
 {
     public static class Clip
     {
-        public static async Task SetText(string text)
+        public static async Task SetText(string text, string logDescription)
         {
             try
             {
                 await ClipboardService.SetTextAsync(text);
-                Console.WriteLine("Copied to clipboard");
+                Console.WriteLine(logDescription);
             }
             catch
             {

@@ -364,7 +364,8 @@ namespace GeoTourney
             {
                 CurrentGameId = gameId;
                 GameState = GameState.Running;
-                return null;
+                var currentGameNumber = (Games.OrderByDescending(x => x.GameNumber).FirstOrDefault()?.GameNumber ?? 0) + 1;
+                return $"Game #{currentGameNumber}: {urlToChallenge}";
             }
 
             return "That game URL has already been played.";
