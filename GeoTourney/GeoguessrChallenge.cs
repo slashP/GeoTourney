@@ -12,6 +12,7 @@ namespace GeoTourney
     {
         const int DefaultTimeLimit = 60;
         const string PathToUserDefinedMapDefinitions = "maps.txt";
+        static Random random = new();
 
         static readonly Dictionary<string, (string mapId, string group)> Maps = new()
         {
@@ -133,16 +134,16 @@ namespace GeoTourney
                 return ($"Game mode {gameModeDescription} not known. One of {string.Join(", ", validGameModes)}", null);
             }
 
-            var map = await FindMap((mapKey ?? string.Empty).ToLower());
-            if (map == null)
+            var mapId = await FindMapId((mapKey ?? string.Empty).ToLower());
+            if (mapId == null)
             {
                 return ($"Couldn't find map for {mapKey}.", null);
             }
 
-            return await GeoguessrApi.GenerateChallengeLink(page, config, timeLimit, gameMode, map.Value.mapId);
+            return await GeoguessrApi.GenerateChallengeLink(page, config, timeLimit, gameMode, mapId);
         }
 
-        static async Task<(string mapId, string? group)?> FindMap(string mapKey)
+        static async Task<string?> FindMapId(string mapKey)
         {
             var dict = Maps;
             if (File.Exists(PathToUserDefinedMapDefinitions))
@@ -151,9 +152,10 @@ namespace GeoTourney
                 var valid = lines.Where(x => x.Split(' ').Length >= 2).Select(x => new
                 {
                     mapKey = x.Split(' ')[0].ToLower(),
-                    mapId = x.Split(' ')[1].ToLower()
+                    mapId = x.Split(' ')[1].ToLower(),
+                    group = x.Split(' ').Skip(2).FirstOrDefault()?.ToLower()
                 }).Where(x => !string.IsNullOrEmpty(x.mapKey) && !string.IsNullOrEmpty(x.mapId)).ToList();
-                var userEntriesAsDictionary = valid.ToLookup(x => x.mapKey, x => (x.mapId, (string?)null))
+                var userEntriesAsDictionary = valid.ToLookup(x => x.mapKey, x => (x.mapId, (string?)x.group))
                     .ToDictionary(x => x.Key, x => x.First());
                 var match = FindMapThatMatches(mapKey, userEntriesAsDictionary, dict);
                 return match;
@@ -162,14 +164,28 @@ namespace GeoTourney
             return FindMapThatMatches(mapKey, new Dictionary<string, (string mapKey, string? mapId)>(), dict);
         }
 
-        static (string mapId, string? group)? FindMapThatMatches(string mapKey,
+        static string? FindMapThatMatches(
+            string mapKey,
             Dictionary<string, (string mapId, string? group)> userEntriesAsDictionary,
             Dictionary<string, (string mapId, string group)> programEntries)
         {
+            if (mapKey.StartsWith("random"))
+            {
+                var takeFromGroup = mapKey.Skip("random".Length).AsString();
+                Func<(string mapId, string? group), bool> selector = string.IsNullOrEmpty(takeFromGroup)
+                    ? _ => true
+                    : tuple => tuple.group == takeFromGroup;
+                Func<(string mapId, string group), bool> selector2 = string.IsNullOrEmpty(takeFromGroup)
+                    ? _ => true
+                    : tuple => tuple.group == takeFromGroup;
+                var selectRandomFrom = userEntriesAsDictionary.Values.Where(selector).Select(x => x.mapId)
+                    .Concat(programEntries.Values.Where(selector2).Select(x => x.mapId)).Distinct().ToList();
+                return selectRandomFrom.Any() ? selectRandomFrom[random.Next(selectRandomFrom.Count)] : null;
+            }
             var match = userEntriesAsDictionary.TryGetValue(mapKey, out var userMap) ? userMap :
                 programEntries.TryGetValue(mapKey, out var hardcodedMap) ? hardcodedMap :
                 PartialMatch(userEntriesAsDictionary, Maps, mapKey);
-            return match;
+            return match?.mapId;
         }
 
         static (string mapId, string? group)? PartialMatch(Dictionary<string, (string mapId, string? group)> userMaps, Dictionary<string, (string mapId, string group)> programMaps, string mapKey)
