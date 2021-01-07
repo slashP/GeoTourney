@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Web;
 
 namespace GeoTourney
 {
@@ -26,6 +27,8 @@ namespace GeoTourney
         public static string AsString(this IEnumerable<char> characters) => new(characters.ToArray());
 
         public static string Pluralize(this string text) => text?.Length == 1 ? text : $"{text}s";
+
+        public static string HtmlEncode(this string text) => HttpUtility.HtmlEncode(text);
 
         public static string GetVersion()
         {

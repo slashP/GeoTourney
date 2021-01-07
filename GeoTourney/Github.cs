@@ -1,6 +1,7 @@
 ﻿using System;
-using System.IO;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Octokit;
@@ -39,6 +40,33 @@ namespace GeoTourney
             var path = $"geoguessr/{id}.json";
             await CreateFileIfNotExists(client, repo, fileContent, path, "Geoguessr tournament.");
             return $"https://{repoName}/{githubHtmlFilePath}?id={id}";
+        }
+
+        public static async Task<string?> UploadMaps(IConfiguration configuration, IReadOnlyCollection<GeoguessrMap> maps)
+        {
+            try
+            {
+                var client = GitHubClient(configuration);
+                var user = await client.User.Current();
+                var owner = user.Login.ToLower();
+                var repoName = $"{owner}.github.io";
+                var repo = await CreateRepositoryIfNotExists(client, owner, repoName);
+                var content = EmbeddedFileHelper.Content("mapsTemplate.html");
+                var githubHtmlFilePath = "geoguessr/maps.html";
+                var mapsContent = JsonSerializer.Serialize(maps);
+                var id = DateTime.Now.Ticks.ToString();
+                var path = $"geoguessr/maps.{id}.json";
+
+                await CreateOrUpdateFile(client, repo, mapsContent, path, "Maps page.");
+                await CreateOrUpdateFile(client, repo, content, githubHtmlFilePath, "Maps page.");
+                return $"https://{repoName}/{githubHtmlFilePath}?id={id}";
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            return null;
         }
 
         static GitHubClient GitHubClient(IConfiguration configuration)
@@ -93,6 +121,30 @@ namespace GeoTourney
                 {
                     Console.WriteLine($"The Github token provided does not have access to the 'public_repo' scope. Unable to create file '{path}' in repository {repo.FullName}");
                     throw;
+                }
+            }
+        }
+
+        static async Task CreateOrUpdateFile(GitHubClient client, Repository repo, string fileContent, string path, string commitMessage)
+        {
+            try
+            {
+                var file = await client.Repository.Content.GetAllContents(repo.Id, path);
+                await client.Repository.Content.UpdateFile(repo.Id, path,
+                    new UpdateFileRequest(commitMessage, fileContent, file.First().Sha));
+            }
+            catch (NotFoundException)
+            {
+                try
+                {
+                    await client.Repository.Content.CreateFile(
+                        repo.Id,
+                        path,
+                        new CreateFileRequest(commitMessage, fileContent, repo.DefaultBranch));
+                }
+                catch (NotFoundException)
+                {
+                    Console.WriteLine($"The Github token provided does not have access to the 'public_repo' scope. Unable to create file '{path}' in repository {repo.FullName}");
                 }
             }
         }

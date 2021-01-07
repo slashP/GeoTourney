@@ -163,6 +163,12 @@ try
                 if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
             }
         }
+        else if (inputCommand == "maps")
+        {
+            var maps = await GeoguessrChallenge.GetMaps(page);
+            var messageToChat = await Github.UploadMaps(config, maps);
+            if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+        }
     }
 }
 catch (Exception e)

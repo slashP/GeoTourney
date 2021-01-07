@@ -143,25 +143,50 @@ namespace GeoTourney
             return await GeoguessrApi.GenerateChallengeLink(page, config, timeLimit, gameMode, mapId);
         }
 
+        public static async Task<IReadOnlyCollection<GeoguessrMap>> GetMaps(Page page)
+        {
+            var allMaps = (await GetUserDefinedMaps()).Concat(Maps.Select(x => new MapCommand
+            {
+                MapKey = x.Key,
+                MapId = x.Value.mapId,
+                Group = x.Value.group
+            })).GroupBy(x => x.MapId).Select(x => x.OrderByDescending(y => y.MapId.Length).First()).ToList();
+            var maps = await GeoguessrApi.GetMaps(page, allMaps);
+            return allMaps.Select(x =>
+            {
+                var map = maps.FirstOrDefault(y => y.id == x.MapId) ?? new GeoguessrApi.MapDescription
+                {
+                    id = x.MapId
+                };
+                return new GeoguessrMap
+                {
+                    map = map,
+                    shortcut = x.MapKey.HtmlEncode(),
+                    @group = (x.Group ?? string.Empty).HtmlEncode()
+                };
+            }).ToList();
+        }
+
         static async Task<string?> FindMapId(string mapKey)
         {
-            var dict = Maps;
-            if (File.Exists(PathToUserDefinedMapDefinitions))
-            {
-                var lines = await File.ReadAllLinesAsync(PathToUserDefinedMapDefinitions);
-                var valid = lines.Where(x => x.Split(' ').Length >= 2).Select(x => new
-                {
-                    mapKey = x.Split(' ')[0].ToLower(),
-                    mapId = x.Split(' ')[1].ToLower(),
-                    group = x.Split(' ').Skip(2).FirstOrDefault()?.ToLower()
-                }).Where(x => !string.IsNullOrEmpty(x.mapKey) && !string.IsNullOrEmpty(x.mapId)).ToList();
-                var userEntriesAsDictionary = valid.ToLookup(x => x.mapKey, x => (x.mapId, (string?)x.group))
-                    .ToDictionary(x => x.Key, x => x.First());
-                var match = FindMapThatMatches(mapKey, userEntriesAsDictionary, dict);
-                return match;
-            }
+            var userDefinedMaps = await GetUserDefinedMaps();
+            var userEntriesAsDictionary = userDefinedMaps.ToLookup(x => x.MapKey, x => (mapId: x.MapId, (string?)x.Group))
+                .ToDictionary(x => x.Key, x => x.First());
+            var match = FindMapThatMatches(mapKey, userEntriesAsDictionary, Maps);
+            return match;
+        }
 
-            return FindMapThatMatches(mapKey, new Dictionary<string, (string mapKey, string? mapId)>(), dict);
+        static async Task<IReadOnlyCollection<MapCommand>> GetUserDefinedMaps()
+        {
+            if (!File.Exists(PathToUserDefinedMapDefinitions)) return Array.Empty<MapCommand>();
+            var lines = await File.ReadAllLinesAsync(PathToUserDefinedMapDefinitions);
+            var valid = lines.Where(x => x.Split(' ').Length >= 2).Select(x => new MapCommand
+            {
+                MapKey = x.Split(' ')[0].ToLower(),
+                MapId = x.Split(' ')[1].ToLower(),
+                Group = x.Split(' ').Skip(2).FirstOrDefault()?.ToLower()
+            }).Where(x => !string.IsNullOrEmpty(x.MapKey) && !string.IsNullOrEmpty(x.MapId)).ToList();
+            return valid;
         }
 
         static string? FindMapThatMatches(
@@ -216,5 +241,19 @@ namespace GeoTourney
         {
             return (ushort) Math.Min((timeLimit / 10) * 10, 600);
         }
+    }
+
+    public record MapCommand
+    {
+        public string MapKey { get; set; } = string.Empty;
+        public string MapId { get; set; } = string.Empty;
+        public string? Group { get; set; }
+    }
+
+    public record GeoguessrMap
+    {
+        public GeoguessrApi.MapDescription map { get; set; } = new();
+        public string shortcut { get; set; } = string.Empty;
+        public string @group { get; set; } = string.Empty;
     }
 }

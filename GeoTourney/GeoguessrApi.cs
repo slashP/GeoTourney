@@ -57,7 +57,7 @@ namespace GeoTourney
 
             try
             {
-                var challengeApiUrl = $"https://www.geoguessr.com/api/v3/challenges";
+                var challengeApiUrl = $"challenges";
                 var forbidMoving = gameMode switch
                 {
                     GameMode.NoMove or GameMode.NMPZ => true,
@@ -83,15 +83,58 @@ namespace GeoTourney
                     forbidRotating = forbidRotating,
                     timeLimit = timeLimit
                 });
-                var script = $@"fetch('{challengeApiUrl}', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({requestBody})}}).then(response => response.json()).then(x => x.token)";
-                var result = await page.EvaluateExpressionAsync<string>(script);
-                return (null, $"https://www.geoguessr.com/challenge/{result}");
+                var result = await PostWithFetch<ChallengeApiResult>(page, requestBody, "challenges");
+                if (result == null)
+                {
+                    return ("Unknown response type", null);
+                }
+
+                return (null, $"https://www.geoguessr.com/challenge/{result.token}");
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
                 return ("Unexpected error.", null);
             }
+        }
+
+        public static async Task<IReadOnlyCollection<MapDescription>> GetMaps(
+            Page page,
+            IEnumerable<MapCommand> maps)
+        {
+            try
+            {
+                var results = new List<MapDescription>();
+                foreach (var map in maps)
+                {
+                    var m = await GetWithFetch<IReadOnlyCollection<MapDescription>>(page, $"search/map?page=0&count=1&q={map.MapId}");
+                    if (m is not null && m.Count == 1) results.Add(m.First());
+                }
+
+                return results;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            return Array.Empty<MapDescription>();
+        }
+
+        static async Task<T?> PostWithFetch<T>(Page page, object requestBody, string path)
+        {
+            var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
+            var script = $@"fetch('{apiUrl}', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({requestBody})}}).then(response => response.json()).then(x => JSON.stringify(x))";
+            var result = await page.EvaluateExpressionAsync<string>(script);
+            return JsonSerializer.Deserialize<T>(result);
+        }
+
+        static async Task<T?> GetWithFetch<T>(Page page, string path)
+        {
+            var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
+            var script = $@"fetch('{apiUrl}', {{method: 'GET', headers: {{'Content-Type': 'application/json'}}}}).then(response => response.json()).then(x => JSON.stringify(x))";
+            var result = await page.EvaluateExpressionAsync<string>(script);
+            return JsonSerializer.Deserialize<T>(result);
         }
 
         static async Task<string> GoToUrlAndGetJsonString(Page page, string url)
@@ -134,12 +177,28 @@ namespace GeoTourney
             public string? message { get; set; }
         }
 
+        record ChallengeApiResult
+        {
+            public string? token { get; set; }
+        }
+
         public enum GameMode
         {
             Invalid,
             Move,
             NoMove,
             NMPZ
+        }
+
+        public record MapDescription
+        {
+            public string id { get; set; } = string.Empty;
+            public string name { get; set; } = string.Empty;
+            public string url { get; set; } = string.Empty;
+            public int likes { get; set; }
+            public string creatorId { get; set; } = string.Empty;
+            public string creator { get; set; } = string.Empty;
+            public DateTime updated { get; set; }
         }
     }
 }
