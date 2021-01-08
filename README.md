@@ -43,9 +43,9 @@ This is the Twitch account the application will send chat messages on behalf of.
 ### How to use
 1. Run `Geoguessr.exe` by double clicking (or from command line). The first time this will take time as it downloads ~300 MB.
 2. Then a browser opens. Log into the geoguessr account you will be playing with. NB: After logging in, minimize this browser window, you **cannot** use this as the browser you play in.
-3. Send challenge links to the Twitch chat you're hosting, f.ex. `https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr` Only the link, nothing else.
+3. Create a game by sending a challenge links to the Twitch chat you're hosting, f.ex. `https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr` or let the program do it. See "Game/challenge creation below".
 4. The bot responds with `Game #1: https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr`.
-5. Play the challenge after your audience has had some time. When finished the bot will post a link to results page, f.ex. https://slashpeekbot.github.io/geoguessr/v4.7/tournament.html?id=637451944357099056
+5. Play the challenge. Then send `!endgame` in the chat when you're ready. The bot will post a link to results page, f.ex. https://slashpeekbot.github.io/geoguessr/v4.7/tournament.html?id=637451944357099056
 6. Commands. These commands only work for the streamer/broadcaster.
   * `!totalscore` to get a results page with all games and points summed.
   * `!restart` to forget current tournament and start over.
@@ -62,7 +62,7 @@ This is the Twitch account the application will send chat messages on behalf of.
   * `!revive less than N` to revive all players with less than N points in the last game.
   * `!revive more than N` to revive all players with more than N points in the last game.
 
-![Gameplay in action](setup/game_in_action.png "Gameplay in action")
+![Gameplay in action](setup/game_in_action_2.png "Gameplay in action")
 
 ### Game/challenge creation
 You can start a game two ways: 1) Post a challenge link to chat. 2) use the !game command.
@@ -81,7 +81,7 @@ Game types: `move`/`nomove`/`nmpz`. *Default nomove*.
 `!game adw 10 nmpz` for a no move, no pan, no zoom game.
 
 ##### Creating random games
-You can let the program decided which map to use. The way you do so is to append `random` to the *group* you would like to pick maps from:
+You can let the program decide which map to use. The way you do so is to append `random` to the *group* you would like to pick maps from:
 
 `!game randomworld` for a random game from within the 'world' group.
 `!game randomcountry` for a random game from within the 'country' group.
