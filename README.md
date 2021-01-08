@@ -49,6 +49,9 @@ This is the Twitch account the application will send chat messages on behalf of.
 6. Commands. These commands only work for the streamer/broadcaster.
   * `!totalscore` to get a results page with all games and points summed.
   * `!restart` to forget current tournament and start over.
+  * `!endgame` to end the current game and record results.
+  * `!game [parameters]` to create a challenge and start the game. Read more below. You should do this after you as a streamer have finished playing.
+  * `!maps` to see which maps are available and what their shortcut/code is.
   * `!elim` to toggle elimination mode on/off.
   * `!elim slashpeek` to eliminate user `slashpeek`.
   * `!elim 22138` to eliminate the user with 22138 points in the last game.
@@ -60,6 +63,46 @@ This is the Twitch account the application will send chat messages on behalf of.
   * `!revive more than N` to revive all players with more than N points in the last game.
 
 ![Gameplay in action](setup/game_in_action.png "Gameplay in action")
+
+### Game/challenge creation
+You can start a game two ways: 1) Post a challenge link to chat. 2) use the !game command.
+
+#### The !game command
+To create a game you can let GeoTourney create it for you. There are ~100 maps included by default. You can see which ones [here](https://slashpeekbot.github.io/geoguessr/maps.html?id=637457261045090844). All maps have a *shortcut* that is used to reference a single map and a *group* that is used to reference multiple maps. "A Diverse World" by Mapper has shortcut `adw` and a challenge link can be created by doing:
+
+`!game adw`
+
+Time limit: number in seconds. *Default 60.* 0 for no time limit.
+
+`!game adw 40` for a game with 40 seconds time limit.
+
+Game types: `move`/`nomove`/`nmpz`. *Default nomove*.
+
+`!game adw 10 nmpz` for a no move, no pan, no zoom game.
+
+##### Creating random games
+You can let the program decided which map to use. The way you do so is to append `random` to the *group* you would like to pick maps from:
+
+`!game randomworld` for a random game from within the 'world' group.
+`!game randomcountry` for a random game from within the 'country' group.
+`!game random` for a random game from all available maps.
+
+These can also be combined with time limit and game type as described above.
+
+##### Extending the !game command
+You can have your own maps with shortcuts. Create a text file in the same folder as `GeoTourney.exe` called `maps.txt`. Then add one line for each map.
+
+*Shortcut* {SPACE} *map id* {SPACE} *group*. Shortcut and group can be what you want. Map id is the last part of the URL in the browser when you're on a map. F.ex:
+
+```
+usmcd 5949f83fdbd032c678addfd7 mcdonalds
+worldmcd 5754651a00a27f6f482a2a3d mcdonalds
+polandmcd 5cc070366cca664ea81d8d9e mcdonalds
+```
+
+Now you can create games based on them (no restart). `!game polandmcd 60 move` / `!game randommcdonalds`
+
+You can use `!maps` to verify that your map was "registered" correctly.
 
 ### Motivation, explanation, FAQ, ramblings
 Basically I wanted to see an application that handled multi-game Geoguessr tournaments in a better way and let the users play on their computers. Secondly having a good presentation of results that was dynamic and available to everyone (not just on the streamer's machine) also after the games finish was a goal.
