@@ -14,52 +14,53 @@ using Extensions = GeoTourney.Extensions;
 // https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr
 Regex lessOrMoreThanRegex = new(@"^(elim|revive) (less|more) (than|then) (\d{1,5}?)$");
 Regex lessOrMoreThanFinishGameRegex = new(@"^(less|more) (than|then) (\d{1,5}?)$");
-try
+var name = typeof(GeoTournament).Assembly.GetName();
+Console.WriteLine($"Starting {name.Name} {GeoTourney.Extensions.GetVersion()}");
+GeoTournament tournament = new();
+var config = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json").Build();
+Console.OutputEncoding = Encoding.Unicode;
+IGameEventOutput[] possibleOutputs =
 {
-    var name = typeof(GeoTournament).Assembly.GetName();
-    Console.WriteLine($"Starting {name.Name} {GeoTourney.Extensions.GetVersion()}");
-    GeoTournament tournament = new();
-    var config = new ConfigurationBuilder()
-        .SetBasePath(Directory.GetCurrentDirectory())
-        .AddJsonFile("appsettings.json").Build();
-    Console.OutputEncoding = Encoding.Unicode;
-    IGameEventOutput[] possibleOutputs =
-    {
-        new TwitchClient(),
-        new ConsoleOutput(),
-        new FileOutput()
-    };
-    var allOutputs = possibleOutputs.Select(x => new
-    {
-        Status = x.Initialize(config, OnMessageReceived),
-        Output = x
-    }).ToList();
-    var activeOutputs = allOutputs.Where(x => x.Status == InitializationStatus.Ok).Select(x => x.Output).ToList();
-    var gihubAccess = await Github.VerifyGithubTokenAccess(config);
-    if (!gihubAccess.hasAccess)
-    {
-        Console.WriteLine(gihubAccess.errorMessage);
-        Console.ReadKey();
-        return;
-    }
+    new TwitchClient(),
+    new ConsoleOutput(),
+    new FileOutput()
+};
+var allOutputs = possibleOutputs.Select(x => new
+{
+    Status = x.Initialize(config, OnMessageReceived),
+    Output = x
+}).ToList();
+var activeOutputs = allOutputs.Where(x => x.Status == InitializationStatus.Ok).Select(x => x.Output).ToList();
+var gihubAccess = await Github.VerifyGithubTokenAccess(config);
+if (!gihubAccess.hasAccess)
+{
+    Console.WriteLine(gihubAccess.errorMessage);
+    Console.ReadKey();
+    return;
+}
 
-    var localExampleTournamentPath = config["LocalExampleTournamentPath"];
-    if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampleTournamentPath))
-    {
-        var url = await Github.UploadTournamentData(config, await File.ReadAllTextAsync(localExampleTournamentPath));
-        await Clip.SetText(url, "Copied to clipboard");
-    }
+var localExampleTournamentPath = config["LocalExampleTournamentPath"];
+if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampleTournamentPath))
+{
+    var url = await Github.UploadTournamentData(config, await File.ReadAllTextAsync(localExampleTournamentPath));
+    await Clip.SetText(url, "Copied to clipboard");
+}
 
-    await BrowserSetup.Initiate();
-    var browser = await Puppeteer.LaunchAsync(BrowserSetup.LaunchOptions);
-    var page = await browser.NewPageAsync();
-    await page.GoToAsync("https://www.geoguessr.com/signin");
-    GeoTournament.PrintCommands();
-    Console.WriteLine();
+await BrowserSetup.Initiate();
+var browser = await Puppeteer.LaunchAsync(BrowserSetup.LaunchOptions);
+var page = await browser.NewPageAsync();
+await page.GoToAsync("https://www.geoguessr.com/signin");
+GeoTournament.PrintCommands();
+Console.WriteLine();
 
-    while (true)
+while (true)
+{
+    string? inputCommand = null;
+    try
     {
-        var inputCommand = ReadConsole.ReadLine(TimeSpan.FromSeconds(10));
+        inputCommand = ReadConsole.ReadLine(TimeSpan.FromSeconds(10));
         if (inputCommand?.Equals("exit", StringComparison.OrdinalIgnoreCase) ?? false)
         {
             try
@@ -176,20 +177,24 @@ try
             WriteOutput(activeOutputs, GeoguessrApi.ApiCallsInfo());
         }
     }
-}
-catch (Exception e)
-{
-    Console.WriteLine(e);
-    Console.WriteLine("An unexpected error occurred.");
-    Console.WriteLine("The application will stop and needs to be started again. Press any key to close.");
-    try
+    catch (Exception e)
     {
-        await File.AppendAllTextAsync("errors.txt", $"{DateTime.UtcNow:s}: {GeoTourney.Extensions.GetVersion()}{Environment.NewLine}{e}{Environment.NewLine}");
+        Console.WriteLine(e);
+        Console.WriteLine("An unexpected error occurred.");
+        try
+        {
+            await File.AppendAllTextAsync("errors.txt", $"{DateTime.UtcNow:s}: {GeoTourney.Extensions.GetVersion()}{Environment.NewLine}{e}{Environment.NewLine}");
+            if (inputCommand != null)
+            {
+                WriteOutput(activeOutputs, "Looks like you found a bug. That did not work as expected.");
+            }
+        }
+        catch (Exception second)
+        {
+            Console.WriteLine("Woha. Everything fails now?");
+            Console.WriteLine(second);
+        }
     }
-    catch (Exception)
-    {
-    }
-    Console.ReadKey();
 }
 
 static void OnMessageReceived(object? sender, string e)
