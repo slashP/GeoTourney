@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -79,12 +78,6 @@ try
         if (inputCommand == null)
         {
             foreach (var output in activeOutputs) output.KeepAlive();
-
-            var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
-            if (messageToChat != null)
-            {
-                WriteOutput(activeOutputs, messageToChat);
-            }
         }
         else if (Uri.TryCreate(inputCommand, UriKind.Absolute, out var uri))
         {
@@ -104,6 +97,14 @@ try
         {
             var url = await tournament.PrintTotalScore(config);
             WriteOutput(activeOutputs, $"Tournament results: {url}");
+        }
+        else if (inputCommand == "endgame")
+        {
+            var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
+            if (messageToChat != null)
+            {
+                WriteOutput(activeOutputs, messageToChat);
+            }
         }
         else if (inputCommand == "elim")
         {
@@ -169,6 +170,10 @@ try
             var maps = await GeoguessrChallenge.GetMaps();
             var messageToChat = await Github.UploadMaps(config, maps);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+        }
+        else if (inputCommand == "apiinfo")
+        {
+            WriteOutput(activeOutputs, GeoguessrApi.ApiCallsInfo());
         }
     }
 }

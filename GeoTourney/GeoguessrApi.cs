@@ -1,50 +1,68 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 
 namespace GeoTourney
 {
     public class GeoguessrApi
     {
+        const int MaxApiCallsPerHour = 100;
         static int ErrorMessageCount;
-        static readonly Dictionary<string, List<GeoTournament.PlayerGame>> _games = new();
+        static readonly Dictionary<string, List<GeoTournament.PlayerGame>> CachedGames = new();
+        static readonly TimeSpan Lifetime = TimeSpan.FromHours(1);
+        static readonly SizeAndTimeLimitedQueue ChallengeResultsCallsPerHour = new(Lifetime, MaxApiCallsPerHour);
+        static readonly SizeAndTimeLimitedQueue ChallengeLinkCallsPerHour = new(Lifetime, MaxApiCallsPerHour);
+        static readonly GeoTournament.PlayerGame[] Empty = Array.Empty<GeoTournament.PlayerGame>();
 
         public static async Task<(string? error, IReadOnlyCollection<GeoTournament.PlayerGame> playerGames)> LoadGame(string gameId, Page page, IConfiguration config)
         {
-            var error = await VerifySignedIn(page, config);
-            if (error != null)
+            try
             {
-                return (error, Array.Empty<GeoTournament.PlayerGame>());
-            }
-
-            if (_games.TryGetValue(gameId, out var cachedGames))
-            {
-                return (null, cachedGames);
-            }
-
-            var playerGames = new List<GeoTournament.PlayerGame>();
-            List<GeoTournament.PlayerGame> games;
-            var maxItems = 50;
-            do
-            {
-                var jsonString = await GoToUrlAndGetJsonString(page, $"https://www.geoguessr.com/api/v3/results/scores/{gameId}/{playerGames.Count}/{maxItems}");
-                if (WasNotAllowed(jsonString))
+                var error = await VerifySignedIn(page, config);
+                if (error != null)
                 {
-                    return (null, Array.Empty<GeoTournament.PlayerGame>());
+                    return (error, Empty);
                 }
 
-                games = JsonSerializer.Deserialize<List<GeoTournament.PlayerGame>>(jsonString) ?? new List<GeoTournament.PlayerGame>();
-                playerGames.AddRange(games);
-            } while (games.Count == maxItems);
+                if (CachedGames.TryGetValue(gameId, out var cachedGames))
+                {
+                    return (null, cachedGames);
+                }
 
-            _games.Add(gameId, playerGames);
-            return (null, playerGames);
+                if (!ChallengeResultsCallsPerHour.TryEnqueue(DateTime.UtcNow))
+                {
+                    return (RateLimitResponse(), Empty);
+                }
+
+                var playerGames = new List<GeoTournament.PlayerGame>();
+                List<GeoTournament.PlayerGame> games;
+                var maxItems = 50;
+                do
+                {
+                    games = await GetWithFetch<List<GeoTournament.PlayerGame>>(
+                                    page,
+                                    $"results/scores/{gameId}/{playerGames.Count}/{maxItems}") ??
+                                new List<GeoTournament.PlayerGame>();
+                    if (!games.Any())
+                    {
+                        return ("It looks like you haven't finished the game?", Empty);
+                    }
+
+                    playerGames.AddRange(games);
+                } while (games.Count == maxItems);
+
+                CachedGames.Add(gameId, playerGames);
+                return (null, playerGames);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return ("Unexpected error.", Empty);
+            }
         }
 
         public static async Task<(string? error, string? link)> GenerateChallengeLink(Page page, IConfiguration config, ushort timeLimit, GameMode gameMode, string mapId)
@@ -55,9 +73,13 @@ namespace GeoTourney
                 return (error, null);
             }
 
+            if (!ChallengeLinkCallsPerHour.TryEnqueue(DateTime.UtcNow))
+            {
+                return (RateLimitResponse(), null);
+            }
+
             try
             {
-                var challengeApiUrl = $"challenges";
                 var forbidMoving = gameMode switch
                 {
                     GameMode.NoMove or GameMode.NMPZ => true,
@@ -98,11 +120,26 @@ namespace GeoTourney
             }
         }
 
+        public static string ApiCallsInfo()
+        {
+            static string CallsPerHour(SizeAndTimeLimitedQueue queue, string endpoint)
+            {
+                return $"{queue.Count} '{endpoint}' calls in the preceding {(DateTime.UtcNow - queue.Oldest()):mm\\:ss}";
+            }
+
+            return $"{CallsPerHour(ChallengeResultsCallsPerHour, "api/v3/results/scores")}. {CallsPerHour(ChallengeLinkCallsPerHour, "api/v3/challenges")}";
+        }
+
         static async Task<T?> PostWithFetch<T>(Page page, object requestBody, string path)
         {
             var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
             var script = $@"fetch('{apiUrl}', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({requestBody})}}).then(response => response.json()).then(x => JSON.stringify(x))";
             var result = await page.EvaluateExpressionAsync<string>(script);
+            if (WasNotAllowed(result))
+            {
+                return default;
+            }
+
             return JsonSerializer.Deserialize<T>(result);
         }
 
@@ -111,16 +148,12 @@ namespace GeoTourney
             var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
             var script = $@"fetch('{apiUrl}', {{method: 'GET', headers: {{'Content-Type': 'application/json'}}}}).then(response => response.json()).then(x => JSON.stringify(x))";
             var result = await page.EvaluateExpressionAsync<string>(script);
-            return JsonSerializer.Deserialize<T>(result);
-        }
+            if (WasNotAllowed(result))
+            {
+                return default;
+            }
 
-        static async Task<string> GoToUrlAndGetJsonString(Page page, string url)
-        {
-            await page.GoToAsync(url);
-            var content = await page.MainFrame.GetContentAsync();
-            var jsonString =
-                new string(content.SkipWhile(x => x != '[' && x != '{').TakeWhile(x => x != '<').ToArray());
-            return jsonString;
+            return JsonSerializer.Deserialize<T>(result);
         }
 
         static async Task<string?> VerifySignedIn(Page page, IConfiguration config)
@@ -147,6 +180,12 @@ namespace GeoTourney
             {
                 return false;
             }
+        }
+
+        static string RateLimitResponse()
+        {
+            var timeUntilOldestIsOlderThanLifetime = (Lifetime - (DateTime.UtcNow - ChallengeResultsCallsPerHour.Oldest())).ToString(@"mm\:ss");
+            return $"Rate limited for {timeUntilOldestIsOlderThanLifetime}";
         }
 
         record ErrorModel
