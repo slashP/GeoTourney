@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
@@ -32,10 +33,17 @@ namespace GeoTourney
 
         public static string GetVersion()
         {
-            var name = typeof(GeoTournament).Assembly.GetName();
-            var version = name.Version;
+            var version = Version();
             return $"v.{version?.Major}.{version?.Minor}.{version?.Build}";
         }
+
+        public static string GetMajorMinorVersion()
+        {
+            var version = Version();
+            return $"v.{version?.Major}.{version?.Minor}";
+        }
+
+        static Version? Version() => typeof(GeoTournament).Assembly.GetName().Version;
 
         public static string ShortHash(string text)
         {

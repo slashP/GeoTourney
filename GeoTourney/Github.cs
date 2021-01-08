@@ -33,7 +33,7 @@ namespace GeoTourney
 #if DEBUG
             localSuffix = $"-{Extensions.ShortHash(content)}";
 #endif
-            var version = Extensions.GetVersion();
+            var version = Extensions.GetMajorMinorVersion();
             var githubHtmlFilePath = $"geoguessr/{version}{localSuffix}/tournament.html";
             await CreateFileIfNotExists(client, repo, content, githubHtmlFilePath, "File change.");
             var id = DateTime.Now.Ticks.ToString();
