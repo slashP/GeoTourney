@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -165,7 +166,7 @@ try
         }
         else if (inputCommand == "maps")
         {
-            var maps = await GeoguessrChallenge.GetMaps(page);
+            var maps = await GeoguessrChallenge.GetMaps();
             var messageToChat = await Github.UploadMaps(config, maps);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
         }

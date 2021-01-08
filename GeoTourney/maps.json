@@ -1,0 +1,751 @@
+[
+    {
+        "shortcut": "adw",
+        "group": "world",
+        "mapId": "59a1514f17631e74145b6f47",
+        "mapName": "A Diverse World",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "auw",
+        "group": "world",
+        "mapId": "5b3d510b7a2b425ef47b54fd",
+        "mapName": " An Urban World",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "arw",
+        "group": "world",
+        "mapId": "5be0de51fe3a84037ca36447",
+        "mapName": "A Rural World",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "aiw",
+        "group": "world",
+        "mapId": "5b0a80f8596695b708122809",
+        "mapName": "An Improved World",
+        "mapCreator": "Wolftrekker (YouTube)"
+    },
+    {
+        "shortcut": "aigen",
+        "group": "world",
+        "mapId": "5dbaf08ed0d2a478444d2e8e",
+        "mapName": "AI Generated World (v2)",
+        "mapCreator": " RollinHill"
+    },
+    {
+        "shortcut": "adaiw",
+        "group": "world",
+        "mapId": "5f5a6d3b265fce00018381a5",
+        "mapName": "A Diverse AI World",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "abw",
+        "group": "world",
+        "mapId": "5d73f83d82777cb5781464f2",
+        "mapName": "A Balanced World",
+        "mapCreator": "S. A. Debre"
+    },
+    {
+        "shortcut": "aew",
+        "group": "world",
+        "mapId": "5cd30a0d17e6fc441ceda867",
+        "mapName": "An Extraordinary World",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "abnm",
+        "group": "europe",
+        "mapId": "5f3933944b63e60001e85762",
+        "mapName": "A Better Nordics Map",
+        "mapCreator": "ChristofferDH"
+    },
+    {
+        "shortcut": "remote",
+        "group": "world",
+        "mapId": "5cbe435275345f7b9074bdf8",
+        "mapName": "A Remote World",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "albania",
+        "group": "country",
+        "mapId": "5b0dcc661c70126adc543db2",
+        "mapName": "Albania",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "andorra",
+        "group": "country",
+        "mapId": "5b81ca041ee0107188662a1c",
+        "mapName": "Andorra",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "austria",
+        "group": "country",
+        "mapId": "5b468099a6fd96096470f2b6",
+        "mapName": "Austria • Österreich",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "belgium",
+        "group": "country",
+        "mapId": "59ccca2c572f0e4c689c5a28",
+        "mapName": "Belgium • België • Belgique",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "bulgaria",
+        "group": "country",
+        "mapId": "5a26e60ef3701413a09784c2",
+        "mapName": "Bulgaria • България",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "croatia",
+        "group": "country",
+        "mapId": "5bcf4af2fdd598641cb4c599",
+        "mapName": "Croatia",
+        "mapCreator": "KilianFire"
+    },
+    {
+        "shortcut": "czechia",
+        "group": "country",
+        "mapId": "5a5fc4f3a1835d2820f7443e",
+        "mapName": "Czech Republic",
+        "mapCreator": "Simi (Twitch/Youtube)"
+    },
+    {
+        "shortcut": "denmark",
+        "group": "country",
+        "mapId": "5b4bbe2248b83b0d7ccab676",
+        "mapName": "Denmark",
+        "mapCreator": "Magnus Kongskov"
+    },
+    {
+        "shortcut": "estonia",
+        "group": "country",
+        "mapId": "5b185a1159669593c4ce61c7",
+        "mapName": "Estonia • Eesti",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "finland",
+        "group": "country",
+        "mapId": "5c4c2b5b3d925b4af4b878e2",
+        "mapName": "Finland • Suomi",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "france",
+        "group": "country",
+        "mapId": "5971ce86a237ab6bf0b235bf",
+        "mapName": "France",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "germany",
+        "group": "country",
+        "mapId": "5a104ed7d4f53d58e4f6651c",
+        "mapName": "Germany • Deutschland",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "greece",
+        "group": "country",
+        "mapId": "5b2c126daf2b2a1230e37b0f",
+        "mapName": " Greece • Ελλάδα",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "hungary",
+        "group": "country",
+        "mapId": "5c69e11c1554906e04dede26",
+        "mapName": "Hungary",
+        "mapCreator": "KilianFire"
+    },
+    {
+        "shortcut": "iceland",
+        "group": "country",
+        "mapId": "iceland",
+        "mapName": "Iceland",
+        "mapCreator": "GeoGuessr"
+    },
+    {
+        "shortcut": "ireland",
+        "group": "country",
+        "mapId": "ireland",
+        "mapName": "Ireland",
+        "mapCreator": "GeoGuessr"
+    },
+    {
+        "shortcut": "italy",
+        "group": "country",
+        "mapId": "5dc15e26d0d2a446b8ed181a",
+        "mapName": "Italy • Italia",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "latvia",
+        "group": "country",
+        "mapId": "5b3058bef65f8d3f044aa78e",
+        "mapName": "Latvia/Latvija",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "lithuania",
+        "group": "country",
+        "mapId": "583cbd98f0b56c867c523acf",
+        "mapName": "Lithuania/Lietuva",
+        "mapCreator": "Sagittarius998"
+    },
+    {
+        "shortcut": "luxembourg",
+        "group": "country",
+        "mapId": "5bb3a00a2c0173520855355b",
+        "mapName": "Luxembourg",
+        "mapCreator": "KilianFire"
+    },
+    {
+        "shortcut": "malta",
+        "group": "country",
+        "mapId": "5b1ec9f4faa4cf6dc8731fbf",
+        "mapName": "Malta",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "montenegro",
+        "group": "country",
+        "mapId": "5b12e7814559f48980b6c65a",
+        "mapName": "Montenegro/Crna Gora",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "netherlands",
+        "group": "country",
+        "mapId": "5a523bcdf6c9460978be3544",
+        "mapName": "The Netherlands",
+        "mapCreator": "JonasKooij"
+    },
+    {
+        "shortcut": "northmacedonia",
+        "group": "country",
+        "mapId": "5b13fd9fff760f24e405f020",
+        "mapName": "North Macedonia/ Северна Македонија",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "norway",
+        "group": "country",
+        "mapId": "5df50ca9dfc00528f0ebca5d",
+        "mapName": "Norge • Norway",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "poland",
+        "group": "country",
+        "mapId": "5bda4d8d9f90a81f581e503b",
+        "mapName": "Poland",
+        "mapCreator": "KilianFire"
+    },
+    {
+        "shortcut": "portugal",
+        "group": "country",
+        "mapId": "595901183f3b795344252c0e",
+        "mapName": "Portugal",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "romania",
+        "group": "country",
+        "mapId": "56fe4cec8be4658218780505",
+        "mapName": "Romania",
+        "mapCreator": "Sagittarius998"
+    },
+    {
+        "shortcut": "russia",
+        "group": "country",
+        "mapId": "5e1f8e1727ec176794714886",
+        "mapName": "Россия • Russia",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "serbia",
+        "group": "country",
+        "mapId": "5b19d2cc59669593c4ce9355",
+        "mapName": "Serbia/Србија",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "slovakia",
+        "group": "country",
+        "mapId": "5b4921d35385271b9ce42aa0",
+        "mapName": "Slovakia • Slovensko",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "slovenia",
+        "group": "country",
+        "mapId": "5ae81358b18d088cd07d04f5",
+        "mapName": "Slovenia",
+        "mapCreator": "Iwastravelling"
+    },
+    {
+        "shortcut": "spain",
+        "group": "country",
+        "mapId": "5e09e7ca37a93b0b249b7fbc",
+        "mapName": "España • Spain",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "sweden",
+        "group": "country",
+        "mapId": "5e0a81a0328e461c0cb114fc",
+        "mapName": "Sverige • Sweden",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "switzerland",
+        "group": "country",
+        "mapId": "56e4a542dc7cd6a164dc2be3",
+        "mapName": "Switzerland",
+        "mapCreator": "Ustatsch"
+    },
+    {
+        "shortcut": "ukraine",
+        "group": "country",
+        "mapId": "5b1f1d9d59669593c4cf1ba1",
+        "mapName": "Ukraine/Україна",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "unitedkingdom",
+        "group": "country",
+        "mapId": "5ba862d12c0173524cd9327a",
+        "mapName": "United Kingdom (Better Map)",
+        "mapCreator": "Wolftrekker (YouTube)"
+    },
+    {
+        "shortcut": "bangladesh",
+        "group": "country",
+        "mapId": "5b119671596695ad483a2c7b",
+        "mapName": "Bangladesh • বাংলাদেশ",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "bhutan",
+        "group": "country",
+        "mapId": "5d0cc78c8b19a91fe05aa3b0",
+        "mapName": "Bhutan • འབྲུག་ཡུལ་",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "cambodia",
+        "group": "country",
+        "mapId": "5cd188c08701a87fd05639d0",
+        "mapName": "Cambodia",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "indonesia",
+        "group": "country",
+        "mapId": "5a7877ec7a437a6fd430a657",
+        "mapName": "Indonesia",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "israel",
+        "group": "country",
+        "mapId": "59f061ba72d16b86e034a76d",
+        "mapName": "Israel",
+        "mapCreator": "Sagittarius998"
+    },
+    {
+        "shortcut": "japan",
+        "group": "country",
+        "mapId": "59cf49695d2de4db80351e6e",
+        "mapName": "Japan • 日本 40k+",
+        "mapCreator": "Ustatsch"
+    },
+    {
+        "shortcut": "jordan",
+        "group": "country",
+        "mapId": "5ada43c1582de2514cbb1dcb",
+        "mapName": "Jordan/الأردن",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "kyrgyzstan",
+        "group": "country",
+        "mapId": "5b58bc1efdcd8a103401800a",
+        "mapName": "Kyrgyzstan/Кыргызстан",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "malaysia",
+        "group": "country",
+        "mapId": "5b16d04459669593c4ce2a99",
+        "mapName": "Malaysia",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "mongolia",
+        "group": "country",
+        "mapId": "5b7ee7ec4ee03584bc718352",
+        "mapName": "Mongolia",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "philippines",
+        "group": "country",
+        "mapId": "5b706f487135fa0e48b57018",
+        "mapName": "Philippines • Filipinas",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "singapore",
+        "group": "country",
+        "mapId": "5b7c7f0d1ee01071886578ad",
+        "mapName": "Singapore",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "southkorea",
+        "group": "country",
+        "mapId": "59cc0d4b56b1c23bc81dee8e",
+        "mapName": "South Korea • 대한민국",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "srilanka",
+        "group": "country",
+        "mapId": "5700295fdc7cd6f788207bc4",
+        "mapName": "Sri Lanka",
+        "mapCreator": "Sagittarius998"
+    },
+    {
+        "shortcut": "thailand",
+        "group": "country",
+        "mapId": "5a06280a5955f8f64060c24d",
+        "mapName": "Thailand • ประเทศไทย",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "turkey",
+        "group": "country",
+        "mapId": "5a733d9f7a437a4514cd413f",
+        "mapName": "Turkey • Türkiye",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "unitedarabemirates",
+        "group": "country",
+        "mapId": "5fcb4a73ac5db8000177b655",
+        "mapName": "United Arab Emirates/الإمارات العربية المتحدة",
+        "mapCreator": "Morqka1913"
+    },
+    {
+        "shortcut": "argentina",
+        "group": "country",
+        "mapId": "5b858a07602b2e3a94fccde3",
+        "mapName": "Argentina (Clues to pinpoint)",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "bolivia",
+        "group": "country",
+        "mapId": "5b0f151dff760f7f903a7897",
+        "mapName": "Bolivia",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "brazil",
+        "group": "country",
+        "mapId": "5e3e9aa427ec178a58bd920b",
+        "mapName": "Brasil • Brazil",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "canada",
+        "group": "country",
+        "mapId": "5cd9429c93096059b42c8a71",
+        "mapName": "Canada (Updated coverage)",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "chile",
+        "group": "country",
+        "mapId": "5ccefe2f17e6fc491cfdd67e",
+        "mapName": "Chile",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "colombia",
+        "group": "country",
+        "mapId": "5a7597f25eefedbf68abdf30",
+        "mapName": "Colombia",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "ecuador",
+        "group": "country",
+        "mapId": "5b088bf8faa4cf3ce43b3ed9",
+        "mapName": "Ecuador",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "guatemala",
+        "group": "country",
+        "mapId": "59d15b2d56b1c23bc81ed2eb",
+        "mapName": "Guatemala",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "mexico",
+        "group": "country",
+        "mapId": "5cec6a9219e12f598447c334",
+        "mapName": "Mexico",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "peru",
+        "group": "country",
+        "mapId": "5ccf05f28701a823e429ddeb",
+        "mapName": "Peru",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "unitedstates",
+        "group": "country",
+        "mapId": "5ab6b56818399e27583294d0",
+        "mapName": "United States (no blurry)",
+        "mapCreator": "Simi (Twitch/Youtube)"
+    },
+    {
+        "shortcut": "uruguay",
+        "group": "country",
+        "mapId": "5b035065ff760f65bce086dd",
+        "mapName": "Uruguay",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "botswana",
+        "group": "country",
+        "mapId": "5b01b787ff760f65bce046f1",
+        "mapName": "Botswana",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "eswatini",
+        "group": "country",
+        "mapId": "5b1d2fbd596695bb0ce41ffb",
+        "mapName": "eSwatini • Swaziland",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "ghana",
+        "group": "country",
+        "mapId": "5b770fd44ee03584bc708f0e",
+        "mapName": "Ghana",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "kenya",
+        "group": "country",
+        "mapId": "5bb75139a8e5d55294d73cff",
+        "mapName": "Kenya",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "lesotho",
+        "group": "country",
+        "mapId": "5b1ea6c34559f41ad859b7ec",
+        "mapName": "Lesotho",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "nigeria",
+        "group": "country",
+        "mapId": "5d318d213b4b6a49685edae1",
+        "mapName": "Nigeria",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "senegal",
+        "group": "country",
+        "mapId": "59e5364072d16bfdbc8df37b",
+        "mapName": "Sénégal • Senegal",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "southafrica",
+        "group": "country",
+        "mapId": "5cc224b075345f8dbcdebcdf",
+        "mapName": "South Africa",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "tunisia",
+        "group": "country",
+        "mapId": "5b0453b1ff760f65bce0adf6",
+        "mapName": "Tunisia/République Tunisienne",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "uganda",
+        "group": "country",
+        "mapId": "5b69a0527135fa0e48b4bca5",
+        "mapName": "Uganda ",
+        "mapCreator": "Simi (Twitch/Youtube)"
+    },
+    {
+        "shortcut": "asw",
+        "group": "world",
+        "mapId": "5f109dd7b1cc164d3c8031a4",
+        "mapName": "A Still World",
+        "mapCreator": "Kurt"
+    },
+    {
+        "shortcut": "arandomworld",
+        "group": "world",
+        "mapId": "5da4f454e9473f23640aae3a",
+        "mapName": "A Random World",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "hardworld",
+        "group": "world",
+        "mapId": "5ddefcd244d2a461885f442e",
+        "mapName": "A Hard World",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "evenaiworld",
+        "group": "world",
+        "mapId": "5ead2b35318e469b20a63e40",
+        "mapName": "50 Locations Per Street View Country",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "eud",
+        "group": "europe",
+        "mapId": "5acdf5028861ee4cf4d943bc",
+        "mapName": "European Union (more diverse distribution)",
+        "mapCreator": "Simi (Twitch/Youtube)"
+    },
+    {
+        "shortcut": "topotichel",
+        "group": "europe",
+        "mapId": "5ea726596ea5105668b08845",
+        "mapName": "Topotic's Southern European Hel",
+        "mapCreator": "Topotic (YouTube)"
+    },
+    {
+        "shortcut": "balkan",
+        "group": "europe",
+        "mapId": "5f3f27f90a62ab0001d3efa4",
+        "mapName": "Balkan Roulette",
+        "mapCreator": "Kurt"
+    },
+    {
+        "shortcut": "europe",
+        "group": "europe",
+        "mapId": "5e14c87e328e461f949ae510",
+        "mapName": "Europe",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "alps",
+        "group": "europe",
+        "mapId": "5d077a842ea93928f0133cab",
+        "mapName": "Alps",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "westerneuropeanboogaloo",
+        "group": "europe",
+        "mapId": "5f5e0596de43d900018e183b",
+        "mapName": "Western European Boogaloo",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "continentalnordics",
+        "group": "europe",
+        "mapId": "5fb2c5235da06a0001540854",
+        "mapName": "Continental Nordics",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "balticchaos",
+        "group": "europe",
+        "mapId": "5e8cb0922ad6cf2e3840aeb8",
+        "mapName": "Alok's Baltic Chaos",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "ruraleurope",
+        "group": "europe",
+        "mapId": "5c7fb266f8f7fb51740864a4",
+        "mapName": "Rural Europe",
+        "mapCreator": "Simi (Twitch/Youtube)"
+    },
+    {
+        "shortcut": "southernafrica",
+        "group": "africa",
+        "mapId": "5f3eb715588cd80001d58b6f",
+        "mapName": "Southern Africa",
+        "mapCreator": "Kurt"
+    },
+    {
+        "shortcut": "africa",
+        "group": "africa",
+        "mapId": "5f4a6c9d8c3ef000010a8fc2",
+        "mapName": "Africa",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "americas",
+        "group": "america",
+        "mapId": "5a85b96c98cc2c22a4b497e8",
+        "mapName": "Americas",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "southamerica",
+        "group": "america",
+        "mapId": "5f0c59c4aa9a286648b5a380",
+        "mapName": "South America",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "northamerica",
+        "group": "america",
+        "mapId": "5f17f91f485e360001e16917",
+        "mapName": "North America",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "panamerican",
+        "group": "america",
+        "mapId": "5b13bf61faa4cf8f7cc23f6e",
+        "mapName": "The Panamerican Highway",
+        "mapCreator": "Mapper"
+    },
+    {
+        "shortcut": "northernsouthamerica",
+        "group": "america",
+        "mapId": "5cd04ccf6cca66315479ce15",
+        "mapName": "Northern South America",
+        "mapCreator": "GeoAlok (YouTube)"
+    },
+    {
+        "shortcut": "southcentralamerica",
+        "group": "america",
+        "mapId": "5cd1659675345f65c86dcf5b",
+        "mapName": "South Central America",
+        "mapCreator": "GeoAlok (YouTube)"
+    }
+]

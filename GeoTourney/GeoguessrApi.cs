@@ -98,29 +98,6 @@ namespace GeoTourney
             }
         }
 
-        public static async Task<IReadOnlyCollection<MapDescription>> GetMaps(
-            Page page,
-            IEnumerable<MapCommand> maps)
-        {
-            try
-            {
-                var results = new List<MapDescription>();
-                foreach (var map in maps)
-                {
-                    var m = await GetWithFetch<IReadOnlyCollection<MapDescription>>(page, $"search/map?page=0&count=1&q={map.MapId}");
-                    if (m is not null && m.Count == 1) results.Add(m.First());
-                }
-
-                return results;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            return Array.Empty<MapDescription>();
-        }
-
         static async Task<T?> PostWithFetch<T>(Page page, object requestBody, string path)
         {
             var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
@@ -188,17 +165,6 @@ namespace GeoTourney
             Move,
             NoMove,
             NMPZ
-        }
-
-        public record MapDescription
-        {
-            public string id { get; set; } = string.Empty;
-            public string name { get; set; } = string.Empty;
-            public string url { get; set; } = string.Empty;
-            public int likes { get; set; }
-            public string creatorId { get; set; } = string.Empty;
-            public string creator { get; set; } = string.Empty;
-            public DateTime updated { get; set; }
         }
     }
 }

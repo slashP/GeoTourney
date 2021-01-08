@@ -15,7 +15,7 @@
 </head>
 
 <body>
-<div id="content" class="col-6"></div>
+<div id="content" class="col-5"></div>
 <script>
     async function init() {
         const githubUsername = new URL(window.location).host.split('.')[0];
@@ -30,31 +30,16 @@
 
     init();
 
-    const createDate = d => {
-        var date = new Date(Date.parse(d));
-        if (!date || date.getFullYear() === 1) {
-            return '';
-        }
-
-        return `${date.getFullYear()}-${("0" + (date.getMonth() + 1)).slice(-2)}-${("0" + date.getDate()).slice(-2)}`;
-    }
-
     const createMapLink = map => {
-        if (!map.map || !map.map.url) {
-            return `<a href='https://www.geoguessr.com/maps/${map.map.id}' target="_blank" rel="noreferrer noopener">Not found in search</a>`;
-        }
-
-        return `<a href='https://www.geoguessr.com${map.map.url}' target="_blank" rel="noreferrer noopener">${map.map && map.map.name}</a>`;
+        return `<a href='https://www.geoguessr.com/maps/${map.mapId}' target="_blank" rel="noreferrer noopener">${map.mapName || 'Streamer'}</a>`;
     };
 
     const createMapRow = map => `
 <tr>
     <td>${map.shortcut}</td>
     <td>${createMapLink(map)}</td>
-    <td>${map.map.creator}</td>
-    <td class="text-right">${map.map.likes}</td>
+    <td>${map.mapCreator}</td>
     <td>${map.group}</td>
-    <td>${createDate(map.map.updated)}</td>
 </tr>
 `;
     const createMapsTable = maps => `
@@ -63,9 +48,7 @@
                 <th>Shortcut</th>
                 <th>Name</th>
                 <th>Creator</th>
-                <th class="text-right">Likes</th>
                 <th>Group</th>
-                <th>Updated</th>
             </tr>
 ${maps.map(createMapRow).join('')}
 </table>
