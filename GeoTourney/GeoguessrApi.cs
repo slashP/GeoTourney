@@ -10,6 +10,7 @@ namespace GeoTourney
 {
     public class GeoguessrApi
     {
+        public const string ChallengeUrlPrefix = "https://www.geoguessr.com/challenge";
         const int MaxApiCallsPerHour = 100;
         static int ErrorMessageCount;
         static readonly Dictionary<string, List<GeoTournament.PlayerGame>> CachedGames = new();
@@ -115,7 +116,7 @@ namespace GeoTourney
                     return ("Unknown response type", null);
                 }
 
-                return (null, $"https://www.geoguessr.com/challenge/{result.token}");
+                return (null, $"{ChallengeUrlPrefix}/{result.token}");
             }
             catch (Exception e)
             {

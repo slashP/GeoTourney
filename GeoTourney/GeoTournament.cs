@@ -358,18 +358,26 @@ namespace GeoTourney
                 return await EliminateAndFinish(page, config, 0);
             }
 
-            var gameId = urlToChallenge.PathAndQuery.Split('/').LastOrDefault();
-
-            if (Games.All(x => x.GameUrl?.PathAndQuery.Split('/').LastOrDefault() != gameId))
+            if (IsCurrentGameSameAs(urlToChallenge))
             {
-                CurrentGameId = gameId;
+                return null;
+            }
+
+            var hasNotBeenPlayed = Games.All(x => GameIdFromUrl(x.GameUrl) != GameIdFromUrl(urlToChallenge));
+            if (hasNotBeenPlayed)
+            {
+                CurrentGameId = GameIdFromUrl(urlToChallenge);
                 GameState = GameState.Running;
-                var currentGameNumber = (Games.OrderByDescending(x => x.GameNumber).FirstOrDefault()?.GameNumber ?? 0) + 1;
+                var currentGameNumber = CurrentGameNumber();
                 return $"Game #{currentGameNumber}: {urlToChallenge}";
             }
 
             return "That game URL has already been played.";
         }
+
+        public bool IsCurrentGameSameAs(Uri urlToChallenge) => GameIdFromUrl(urlToChallenge) == CurrentGameId;
+
+        static string? GameIdFromUrl(Uri? urlToChallenge) => urlToChallenge?.PathAndQuery.Split('/').LastOrDefault();
 
         public async Task<string> PrintTotalScore(IConfigurationRoot config)
         {
@@ -394,6 +402,11 @@ namespace GeoTourney
 
             var previousStatus = games.Reverse().SelectMany(y => y.EliminationStatuses).FirstOrDefault(x => x.Key == userId).Value;
             return previousStatus;
+        }
+
+        public int CurrentGameNumber()
+        {
+            return (Games.OrderByDescending(x => x.GameNumber).FirstOrDefault()?.GameNumber ?? 0) + 1;
         }
 
         public record GameObject

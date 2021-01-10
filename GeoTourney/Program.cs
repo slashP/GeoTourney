@@ -61,7 +61,8 @@ while (true)
     try
     {
         inputCommand = ReadConsole.ReadLine(TimeSpan.FromSeconds(10));
-        if (inputCommand?.Equals("exit", StringComparison.OrdinalIgnoreCase) ?? false)
+        var commandType = inputCommand?.StartsWith("!") ?? false ? CommandType.DamnIt : CommandType.Normal;
+        if (inputCommand?.Equals("shutdown", StringComparison.OrdinalIgnoreCase) ?? false)
         {
             try
             {
@@ -80,8 +81,15 @@ while (true)
         {
             foreach (var output in activeOutputs) output.KeepAlive();
         }
-        else if (Uri.TryCreate(inputCommand, UriKind.Absolute, out var uri))
+        else if (Uri.TryCreate(inputCommand, UriKind.Absolute, out var uri) || Uri.TryCreate(inputCommand.Skip(1).AsString(), UriKind.Absolute, out uri))
         {
+            if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt && !tournament.IsCurrentGameSameAs(uri))
+            {
+                var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !{inputCommand} to ignore.";
+                WriteOutput(activeOutputs, message);
+                continue;
+            }
+
             var messageToChat = await tournament.SetCurrentGame(uri, page, config);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
         }
@@ -148,8 +156,15 @@ while (true)
             var messageToChat = await tournament.EliminateAndFinish(page, pointsDescription, points, config);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
         }
-        else if (inputCommand.StartsWith("game"))
+        else if (inputCommand.StartsWith("game") || inputCommand.StartsWith("!game"))
         {
+            if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt)
+            {
+                var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !!{inputCommand} to ignore.";
+                WriteOutput(activeOutputs, message);
+                continue;
+            }
+
             var parts = inputCommand.Split(' ');
             var mapKey = parts.Skip(1).FirstOrDefault();
             var timeDescription = parts.Skip(2).FirstOrDefault();
@@ -197,12 +212,13 @@ while (true)
     }
 }
 
-static void OnMessageReceived(object? sender, string e)
+static void OnMessageReceived(object? sender, string? e)
 {
-    if (e?.StartsWith("https://www.geoguessr.com/challenge") ?? false)
-        ReadConsole.QueueCommand(e);
-    else if (e?.StartsWith("!") ?? false) ReadConsole.QueueCommand(new string(e.Skip(1).ToArray()));
-    else if(int.TryParse(e, out var number) && number >= 0) ReadConsole.QueueCommand(number.ToString());
+    var message = e ?? string.Empty;
+    if (message.StartsWith(GeoguessrApi.ChallengeUrlPrefix) || message.StartsWith($"!{GeoguessrApi.ChallengeUrlPrefix}"))
+        ReadConsole.QueueCommand(message);
+    else if (message.StartsWith("!")) ReadConsole.QueueCommand(message.Skip(1).AsString());
+    else if(int.TryParse(message, out var number) && number >= 0) ReadConsole.QueueCommand(number.ToString());
 }
 
 static void WriteOutput(IEnumerable<IGameEventOutput> activeOutputs, string message)
