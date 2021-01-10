@@ -39,7 +39,7 @@ namespace GeoTourney
             var id = DateTime.Now.Ticks.ToString();
             var path = $"geoguessr/{id}.json";
             await CreateFileIfNotExists(client, repo, fileContent, path, "Geoguessr tournament.");
-            return $"https://{repoName}/{githubHtmlFilePath}?id={id}";
+            return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}";
         }
 
         public static async Task<string?> UploadMaps(IConfiguration configuration, IReadOnlyCollection<GeoguessrMap> maps)
@@ -59,7 +59,7 @@ namespace GeoTourney
 
                 await CreateOrUpdateFile(client, repo, mapsContent, path, "Maps page.");
                 await CreateOrUpdateFile(client, repo, content, githubHtmlFilePath, "Maps page.");
-                return $"https://{repoName}/{githubHtmlFilePath}?id={id}";
+                return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}";
             }
             catch (Exception e)
             {
@@ -148,5 +148,8 @@ namespace GeoTourney
                 }
             }
         }
+
+        static string BranchQueryString(Repository repo) =>
+            repo.DefaultBranch != "main" ? $"&branch={repo.DefaultBranch}" : string.Empty;
     }
 }
