@@ -333,7 +333,8 @@ namespace GeoTourney
         {
             var rows = new[]
             {
-                new {Command = "!restart", Description = "Forget current tournament and start over"},
+                new {Command = "!game [mapshortcut] [timelimit] [gamemode]", Description = "Create a challenge URL and start a game."},
+                new {Command = "!restart", Description = "Forget current tournament and start over."},
                 new {Command = "!totalscore", Description = "Get a results page with all games and points summed."},
                 new {Command = "!elim", Description = "Toggle elimination mode on/off."},
                 new {Command = "!elim slashpeek", Description = "Eliminate one specific player with name slashpeek."},
@@ -342,6 +343,9 @@ namespace GeoTourney
                 new {Command = "!elim more than N", Description = "Eliminate all players with more than N points in the last game."},
                 new {Command = "!revive less than N", Description = "Revive all players with less than N points in the last game."},
                 new {Command = "!revive more than N", Description = "Revive all players with more than N points in the last game."},
+                new {Command = "!currentgame", Description = "Get the current challenge URL."},
+                new {Command = "!apiinfo", Description = "See how many Geoguessr API calls have been made since startup."},
+                new {Command = "!shutdown", Description = "Completely stop the program. Will require restart and signing in again."},
             };
             Console.WriteLine(ConsoleTable.From(rows).ToMinimalString());
         }
@@ -376,6 +380,10 @@ namespace GeoTourney
         }
 
         public bool IsCurrentGameSameAs(Uri urlToChallenge) => GameIdFromUrl(urlToChallenge) == CurrentGameId;
+
+        public string? CurrentGameUrl() => CurrentGameId != null
+            ? $"{GeoguessrApi.ChallengeUrlPrefix.TrimEnd('/')}/{CurrentGameId}"
+            : null;
 
         static string? GameIdFromUrl(Uri? urlToChallenge) => urlToChallenge?.PathAndQuery.Split('/').LastOrDefault();
 

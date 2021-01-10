@@ -27,7 +27,7 @@ This is the Twitch account the application will send chat messages on behalf of.
 4. Put `chat:read chat:edit` into the Scopes field.
 5. Copy the token value and put it into your `appsettings.json` file.
 
-![Create the Twitch access token](setup/twitch_access_token.png "Twitch access token")
+![Create the Twitch access token](documentation/twitch_access_token.png "Twitch access token")
 
 ###### GITHUB_TOKEN
 
@@ -38,7 +38,7 @@ This is the Twitch account the application will send chat messages on behalf of.
 5. Generate token.
 6. Copy the token value and put it into your `appsettings.json` file.
 
-![Create the Github access token](setup/github_access_token.png "Github access token")
+![Create the Github access token](documentation/github_access_token.png "Github access token")
 
 ### How to use
 1. Run `Geoguessr.exe` by double clicking (or from command line). The first time this will take time as it downloads ~300 MB.
@@ -50,8 +50,9 @@ This is the Twitch account the application will send chat messages on behalf of.
   * `!totalscore` to get a results page with all games and points summed.
   * `!restart` to forget current tournament and start over.
   * `!endgame` to end the current game and record results.
-  * `!game [parameters]` to create a challenge and start the game. Read more below. You should do this after you as a streamer have finished playing.
+  * `!game [mapshortcut] [timelimit] [gamemode]` to create a challenge and start the game. Read more below.
   * `!maps` to see which maps are available and what their shortcut/code is.
+  * `!currentgame` to get the URL of the current game.
   * `!elim` to toggle elimination mode on/off.
   * `!elim slashpeek` to eliminate user `slashpeek`.
   * `!elim 22138` to eliminate the user with 22138 points in the last game.
@@ -62,7 +63,7 @@ This is the Twitch account the application will send chat messages on behalf of.
   * `!revive less than N` to revive all players with less than N points in the last game.
   * `!revive more than N` to revive all players with more than N points in the last game.
 
-![Gameplay in action](setup/game_in_action_2.png "Gameplay in action")
+![Gameplay in action](documentation/game_in_action_2.png "Gameplay in action")
 
 ### Game/challenge creation
 You can start a game two ways: 1) Post a challenge link to chat. 2) use the !game command.
@@ -103,6 +104,28 @@ polandmcd 5cc070366cca664ea81d8d9e mcdonalds
 Now you can create games based on them (no restart). `!game polandmcd 60 move` / `!game randommcdonalds`
 
 You can use `!maps` to verify that your map was "registered" correctly.
+
+### Elimination
+Toggle elimination mode on/off with `!elim`. For now we'll assume eliminations are on. After finishing a game the program asks `How many do you want to eliminate?`. You can answer this question in different ways:
+
+  * `X` A positive number indicating how many players should get eliminated.
+  * `!less than X points` where X is a positive number (between 1 and 25000 in practice).
+  * `!more than X points`
+
+The last two are in practice just a shortcut for `!elim less than X points` that you would use "outside the elimination question".
+
+### Result page
+After ending a game, a link to a webpage is generated. There you can see the results from the game:
+
+![Results page](documentation/result-page.png "Results page")
+
+  * Click on R1/R2/R3 etc. to get a map view of guesses from each player. The map zooms to fit all guesses.
+  * Click on each row to filter only to certain players. They will be "highlighted" in white and only those show up in the map. Guess markers on map change from showing round position to the first letter of the player's name.
+  * The blue marker shows the actual location and contains the link to Google maps where you can see what the players saw in the round.
+
+![Total score page](documentation/total-score-page.png "Total score page")
+
+Total score page (`!totalscore`) shows aggregated numbers for the whole tournament. Hover over "total points" to get average game/round scores. Same goes for each game column. Standard deviation is also represented as a way to measure variance/stability.
 
 ### Motivation, explanation, FAQ, ramblings
 Basically I wanted to see an application that handled multi-game Geoguessr tournaments in a better way and let the users play on their computers. Secondly having a good presentation of results that was dynamic and available to everyone (not just on the streamer's machine) also after the games finish was a goal.

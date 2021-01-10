@@ -191,6 +191,11 @@ while (true)
         {
             WriteOutput(activeOutputs, GeoguessrApi.ApiCallsInfo());
         }
+        else if (inputCommand == "currentgame")
+        {
+            var messageToChat = tournament.CurrentGameUrl() ?? "No game running.";
+            WriteOutput(activeOutputs, messageToChat);
+        }
     }
     catch (Exception e)
     {
