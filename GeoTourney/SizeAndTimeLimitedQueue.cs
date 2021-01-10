@@ -16,7 +16,25 @@ namespace GeoTourney
             _limit = limit;
         }
 
-        public bool TryEnqueue(DateTime obj)
+        public void TryEnqueue(DateTime obj)
+        {
+            RemoveStaleEntries();
+
+            if (IsFull())
+            {
+                return;
+            }
+
+            q.Enqueue(obj);
+        }
+
+        public int Count => q.Count;
+
+        public bool IsFull() => q.Count >= _limit;
+
+        public DateTime Oldest() => q.TryPeek(out var d) ? d : DateTime.UtcNow;
+
+        public void RemoveStaleEntries()
         {
             lock (lockObject)
             {
@@ -25,18 +43,6 @@ namespace GeoTourney
                     q.TryDequeue(out _);
                 };
             }
-
-            if (q.Count < _limit)
-            {
-                q.Enqueue(obj);
-                return true;
-            }
-
-            return false;
         }
-
-        public int Count => q.Count;
-
-        public DateTime Oldest() => q.TryPeek(out var d) ? d : DateTime.UtcNow;
     }
 }

@@ -33,7 +33,8 @@ namespace GeoTourney
                     return (null, cachedGames);
                 }
 
-                if (!ChallengeResultsCallsPerHour.TryEnqueue(DateTime.UtcNow))
+                var limitPerHour = ChallengeResultsCallsPerHour;
+                if (limitPerHour.IsFull())
                 {
                     return (RateLimitResponse(), Empty);
                 }
@@ -43,6 +44,7 @@ namespace GeoTourney
                 var maxItems = 50;
                 do
                 {
+                    limitPerHour.TryEnqueue(DateTime.UtcNow);
                     games = await GetWithFetch<List<GeoTournament.PlayerGame>>(
                                     page,
                                     $"results/scores/{gameId}/{playerGames.Count}/{maxItems}") ??
@@ -53,7 +55,7 @@ namespace GeoTourney
                     }
 
                     playerGames.AddRange(games);
-                } while (games.Count == maxItems);
+                } while (games.Count == maxItems && !limitPerHour.IsFull());
 
                 CachedGames.Add(gameId, playerGames);
                 return (null, playerGames);
@@ -73,7 +75,8 @@ namespace GeoTourney
                 return (error, null);
             }
 
-            if (!ChallengeLinkCallsPerHour.TryEnqueue(DateTime.UtcNow))
+            var limitPerHour = ChallengeLinkCallsPerHour;
+            if (limitPerHour.IsFull())
             {
                 return (RateLimitResponse(), null);
             }
@@ -105,6 +108,7 @@ namespace GeoTourney
                     forbidRotating = forbidRotating,
                     timeLimit = timeLimit
                 });
+                limitPerHour.TryEnqueue(DateTime.UtcNow);
                 var result = await PostWithFetch<ChallengeApiResult>(page, requestBody, "challenges");
                 if (result == null)
                 {
@@ -124,6 +128,7 @@ namespace GeoTourney
         {
             static string CallsPerHour(SizeAndTimeLimitedQueue queue, string endpoint)
             {
+                queue.RemoveStaleEntries();
                 return $"{queue.Count} '{endpoint}' calls in the preceding {(DateTime.UtcNow - queue.Oldest()):mm\\:ss}";
             }
 
