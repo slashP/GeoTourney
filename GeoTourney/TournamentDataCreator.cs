@@ -49,6 +49,7 @@ namespace GeoTourney
             {
                 players = g.SelectMany(x => x.PlayerGames).GroupBy(x => x.userId).Select(x => new
                 {
+                    playerId = x.Key,
                     playerName = x.First().playerName,
                     totalPoints = x.Sum(y => y.totalScore),
                     games = g.Select(y => new

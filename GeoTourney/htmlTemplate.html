@@ -66,6 +66,15 @@
         content.innerHTML = tournamentHtml + games.map(createGame).join('');
     }
     init();
+    const average = list => Math.trunc(list.reduce((a, v, i) => (a * i + v) / (i + 1)));
+    const standardDeviation = (arr, usePopulation = false) => {
+        const mean = arr.reduce((acc, val) => acc + val, 0) / arr.length;
+        const value = Math.sqrt(
+            arr.reduce((acc, val) => acc.concat((val - mean) ** 2), []).reduce((acc, val) => acc + val, 0) /
+            (arr.length - (usePopulation ? 0 : 1))
+        );
+        return Math.trunc(value);
+    };
     const renderGameTables = () => {
         games.forEach(game => {
             let element = document.getElementById(`game-table-${game.gameNumber}`);
@@ -199,6 +208,31 @@ ${players.map(createRoundRow).join('')}
         }
     }
 
+    const roundPointsInGame = (games, gameIndex, playerInTournament) => {
+        var gameNumber = gameIndex + 1;
+        var game = games.filter(x => x.gameNumber === gameNumber)[0];
+        var p = game.playerGames.filter(x => x.playerId === playerInTournament.playerId)[0];
+        return p ? [p.r1, p.r2, p.r3, p.r4, p.r5] : [];
+    };
+
+    const totalPointsExtraInfo = (playerInTournament, games) => {
+        var allRoundPoints = games.map((x, i) => roundPointsInGame(games, i, playerInTournament)).flat();
+        var gamePoints = playerInTournament.games.map(x => x.gamePoints);
+        return `Avg game: ${average(gamePoints)}
+Overall avg round: ${average(allRoundPoints)}
+
+Game std.dev: ${standardDeviation(gamePoints)}
+Overall round std.dev: ${standardDeviation(allRoundPoints)}`;
+    }
+
+    const gameExtraInfo = (games, gameIndex, playerInTournament) => {
+        const roundPoints = roundPointsInGame(games, gameIndex, playerInTournament);
+        if(roundPoints.length === 0) return '';
+        return `Average round: ${average(roundPoints)}
+
+Round std.dev: ${standardDeviation(roundPoints)}`;
+    }
+
     const highLightClass = playerGame => filteredPlayerIds.includes(playerGame.playerId) ? "bg-light text-dark" : "";
 
     const createGameRow = (game, playerGame, index) => `
@@ -256,8 +290,8 @@ ${game.playerGames.map((pg, i) => createGameRow(game, pg, i)).join('')}
 <tr>
             <td class="text-right">${index + 1}</td>
             <td>${playerInTournament.playerName}</td>
-            <td class="text-right">${numberFormat.format(playerInTournament.totalPoints)}</td>
-${playerInTournament.games.map(x => `<td class="text-right">${x.gamePoints === null ? "-" : numberFormat.format(x.gamePoints)}</td>`).join('')}
+            <td class="text-right" title="${totalPointsExtraInfo(playerInTournament, games)}">${numberFormat.format(playerInTournament.totalPoints)}</td>
+${playerInTournament.games.map((x, i) => `<td class="text-right" title="${gameExtraInfo(games, i, playerInTournament)}">${x.gamePoints === null ? "-" : numberFormat.format(x.gamePoints)}</td>`).join('')}
 </tr>
 `;
     const createTournamentTable = tournament => `
