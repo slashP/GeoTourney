@@ -19,7 +19,8 @@
 <script>
     async function init() {
         const githubUsername = new URL(window.location).host.split('.')[0];
-        const id = new URL(window.location).searchParams.get("id");
+        const urlSearchParams = new URL(window.location).searchParams;
+        const id = urlSearchParams.get("id");
         const branch = urlSearchParams.get("branch") || "main";
         const url = `https://raw.githubusercontent.com/${githubUsername}/${githubUsername}.github.io/${branch}/geoguessr/maps.${id}.json`;
         const response = await fetch(url);
