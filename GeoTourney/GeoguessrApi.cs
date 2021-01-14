@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ namespace GeoTourney
     {
         public const string ChallengeUrlPrefix = "https://www.geoguessr.com/challenge";
         const int MaxApiCallsPerHour = 100;
+        const string AuthenticationFilePath = "local-authentication.json";
         static int ErrorMessageCount;
         static readonly Dictionary<string, List<GeoTournament.PlayerGame>> CachedGames = new();
         static readonly TimeSpan Lifetime = TimeSpan.FromHours(1);
@@ -136,43 +138,107 @@ namespace GeoTourney
             return $"{CallsPerHour(ChallengeResultsCallsPerHour, "api/v3/results/scores")}. {CallsPerHour(ChallengeLinkCallsPerHour, "api/v3/challenges")}";
         }
 
+        public static async Task<bool> TrySignInFromLocalFile(Page page)
+        {
+            try
+            {
+                if (File.Exists(AuthenticationFilePath))
+                {
+                    var cookieDataFromFile = JsonSerializer.Deserialize<CookieParam>(await File.ReadAllTextAsync(AuthenticationFilePath));
+                    if (cookieDataFromFile != null && Extensions.UnixTimeStampToDateTime(cookieDataFromFile.Expires ?? 0) > DateTime.Now.AddDays(1))
+                    {
+                        await page.SetCookieAsync(cookieDataFromFile);
+                        return true;
+                    }
+                    else
+                    {
+                        File.Delete(AuthenticationFilePath);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed trying to auto sign in from {AuthenticationFilePath} data.");
+                Console.WriteLine(e);
+            }
+
+            return false;
+        }
+
         static async Task<T?> PostWithFetch<T>(Page page, object requestBody, string path)
         {
             var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
             var script = $@"fetch('{apiUrl}', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({requestBody})}}).then(response => response.json()).then(x => JSON.stringify(x))";
-            var result = await page.EvaluateExpressionAsync<string>(script);
-            if (WasNotAllowed(result))
-            {
-                return default;
-            }
-
-            return JsonSerializer.Deserialize<T>(result);
+            return await CallGeoguessrApi<T>(page, script);
         }
 
         static async Task<T?> GetWithFetch<T>(Page page, string path)
         {
             var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
             var script = $@"fetch('{apiUrl}', {{method: 'GET', headers: {{'Content-Type': 'application/json'}}}}).then(response => response.json()).then(x => JSON.stringify(x))";
+            return await CallGeoguessrApi<T>(page, script);
+        }
+
+        static async Task<T?> CallGeoguessrApi<T>(Page page, string script)
+        {
             var result = await page.EvaluateExpressionAsync<string>(script);
             if (WasNotAllowed(result))
             {
                 return default;
             }
 
+            await SaveTokenInLocalAuthenticationFile(page);
             return JsonSerializer.Deserialize<T>(result);
         }
 
+        static async Task SaveTokenInLocalAuthenticationFile(Page page)
+        {
+            try
+            {
+                if (File.Exists(AuthenticationFilePath))
+                {
+                    return;
+                }
+
+                var authCookie = await GetSignInCookie(page);
+                if (authCookie != null)
+                {
+                    await File.WriteAllTextAsync(AuthenticationFilePath, JsonSerializer.Serialize(authCookie));
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+
         static async Task<string?> VerifySignedIn(Page page, IConfiguration config)
         {
-            var cookies = await page.GetCookiesAsync("https://www.geoguessr.com");
-            var isSignedIn = cookies.Any(x => x.Name == "_ncfa");
-            if (!isSignedIn)
+            var signInCookie = await GetSignInCookie(page);
+            if (signInCookie == null)
             {
-                var errorMessage = ++ErrorMessageCount > 3 ? null : $"@{config[TwitchClient.TwitchChannelConfigKey]} You have not signed in to https://www.geoguessr.com correctly.";
-                return errorMessage;
+                if (!await TrySignInFromLocalFile(page))
+                {
+                    return ++ErrorMessageCount > 3 ? null : $"@{config[TwitchClient.TwitchChannelConfigKey]} You have not signed in to https://www.geoguessr.com correctly.";
+                }
             }
 
             return null;
+        }
+
+        static async Task<CookieParam?> GetSignInCookie(Page page)
+        {
+            try
+            {
+                var cookies = await page.GetCookiesAsync("https://www.geoguessr.com");
+                return cookies.FirstOrDefault(x => x.Name == "_ncfa");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return null;
+            }
         }
 
         static bool WasNotAllowed(string json)

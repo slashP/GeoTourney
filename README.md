@@ -42,7 +42,7 @@ This is the Twitch account the application will send chat messages on behalf of.
 
 ### How to use
 1. Run `Geoguessr.exe` by double clicking (or from command line). The first time this will take time as it downloads ~300 MB.
-2. Then a browser opens. Log into the geoguessr account you will be playing with. NB: After logging in, minimize this browser window, you **cannot** use this as the browser you play in.
+2. Then a browser opens. Log into the geoguessr account you will be playing with. NB: After logging in, minimize this browser window, you **cannot** use this as the browser you play in. After logging in once, you should be automatically logged in the next time(s) you start GeoTourney.
 3. Create a game by sending a challenge links to the Twitch chat you're hosting, f.ex. `https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr` or let the program do it. See "Game/challenge creation below".
 4. The bot responds with `Game #1: https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr`.
 5. Play the challenge. Then send `!endgame` in the chat when you're ready. The bot will post a link to results page, f.ex. https://slashpeekbot.github.io/geoguessr/v4.7/tournament.html?id=637451944357099056

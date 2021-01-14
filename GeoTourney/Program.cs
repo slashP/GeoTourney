@@ -51,7 +51,15 @@ if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampl
 await BrowserSetup.Initiate();
 var browser = await Puppeteer.LaunchAsync(BrowserSetup.LaunchOptions);
 var page = await browser.NewPageAsync();
-await page.GoToAsync("https://www.geoguessr.com/signin");
+if (await GeoguessrApi.TrySignInFromLocalFile(page))
+{
+    await page.GoToAsync("https://www.geoguessr.com/me/profile");
+}
+else
+{
+    await page.GoToAsync("https://www.geoguessr.com/signin");
+}
+
 GeoTournament.PrintCommands();
 Console.WriteLine();
 
