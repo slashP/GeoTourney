@@ -52,12 +52,12 @@ namespace GeoTourney
                                     page,
                                     $"results/scores/{gameId}/{playerGames.Count}/{maxItems}") ??
                                 new List<GeoTournament.PlayerGame>();
-                    if (!games.Any())
+                    playerGames.AddRange(games);
+                    if (!playerGames.Any())
                     {
                         return ("It looks like you haven't finished the game?", Empty);
                     }
 
-                    playerGames.AddRange(games);
                 } while (games.Count == maxItems && !limitPerHour.IsFull());
 
                 CachedGames.Add(gameId, playerGames);
