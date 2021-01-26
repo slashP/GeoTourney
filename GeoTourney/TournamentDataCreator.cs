@@ -12,7 +12,7 @@ namespace GeoTourney
             var games = g.Select(x =>
             {
                 var game = x.PlayerGames.First().game;
-                return new
+                return new GameData
                 {
                     allGuesses = game.rounds.Select((_, i) => x.PlayerGames.OrderByDescending(playerGame => playerGame.totalScore).Select(
                         p =>
@@ -25,7 +25,7 @@ namespace GeoTourney
                                 lat = p.game.player.guesses[i].lat,
                                 lng = p.game.player.guesses[i].lng
                             }).ToArray()).ToArray(),
-                    playerGames = x.PlayerGames.Select(pg => new
+                    playerGames = x.PlayerGames.Select(pg => new PlayerGameResult
                     {
                         player = pg.playerName,
                         playerId = pg.userId,
@@ -37,28 +37,32 @@ namespace GeoTourney
                         r5 = pg.game.player.guesses.Skip(4).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         eliminatedInGame = EliminatedInGameDescription(g, x, pg.userId)
                     }).ToList(),
-                    answers = game.rounds.Select(x => new { x.lat, x.lng }).ToArray(),
+                    answers = game.rounds.Select(r => new AnswerInGame { lat = r.lat, lng = r.lng }).ToArray(),
                     mapName = game.mapName,
                     gameNumber = x.GameNumber,
                     gameUrl = x.GameUrl,
+                    forbidMoving = game.forbidMoving,
+                    forbidRotating = game.forbidRotating,
+                    forbidZooming = game.forbidZooming,
+                    timeLimit = game.timeLimit,
                     gameDescription = GameDescription(x.PlayerGames.First().game),
                     playedWithEliminations = x.PlayedWithEliminations
                 };
-            }).OrderByDescending(x => x.gameNumber);
-            var tournament = includeTotalScore ? new
+            }).OrderByDescending(x => x.gameNumber).ToArray();
+            var tournament = includeTotalScore ? new TournamentResult
             {
-                players = g.SelectMany(x => x.PlayerGames).GroupBy(x => x.userId).Select(x => new
+                players = g.SelectMany(x => x.PlayerGames).GroupBy(x => x.userId).Select(x => new PlayerInTournamentResult
                 {
                     playerId = x.Key,
                     playerName = x.First().playerName,
                     totalPoints = x.Sum(y => y.totalScore),
-                    games = g.Select(y => new
+                    games = g.Select(y => new GameResult
                     {
                         gamePoints = y.PlayerGames.FirstOrDefault(z => z.userId == x.Key)?.totalScore
                     }).ToArray()
                 }).OrderByDescending(x => x.totalPoints).ToArray()
             } : null;
-            var result = new
+            var result = new GithubTournamentData
             {
                 games = games,
                 tournament = tournament
@@ -94,6 +98,65 @@ namespace GeoTourney
                 _ => null
             };
         }
+    }
+
+    internal record PlayerGameResult
+    {
+        public string player { get; set; } = string.Empty;
+        public string playerId { get; set; } = string.Empty;
+        public int points { get; set; }
+        public int r1 { get; set; }
+        public int r2 { get; set; }
+        public int r3 { get; set; }
+        public int r4 { get; set; }
+        public int r5 { get; set; }
+        public string? eliminatedInGame { get; set; }
+    }
+
+    internal record GameData
+    {
+        public PlayerInRound[][] allGuesses { get; set; } = Array.Empty<PlayerInRound[]>();
+        public IList<PlayerGameResult> playerGames { get; set; } = Array.Empty<PlayerGameResult>();
+        public IList<AnswerInGame> answers { get; set; } = Array.Empty<AnswerInGame>();
+        public string mapName { get; set; } = string.Empty;
+        public int gameNumber { get; set; }
+        public Uri? gameUrl { get; set; }
+        public string gameDescription { get; set; } = string.Empty;
+        public bool playedWithEliminations { get; set; }
+        public bool forbidMoving { get; set; }
+        public bool forbidRotating { get; set; }
+        public bool forbidZooming { get; set; }
+        public int? timeLimit { get; set; }
+    }
+
+    internal record AnswerInGame
+    {
+        public decimal lat { get; set; }
+        public decimal lng { get; set; }
+    }
+
+    internal record GithubTournamentData
+    {
+        public TournamentResult? tournament { get; set; }
+        public IList<GameData> games { get; set; } = Array.Empty<GameData>();
+    }
+
+    internal record TournamentResult
+    {
+        public IList<PlayerInTournamentResult> players { get; set; } = Array.Empty<PlayerInTournamentResult>();
+    }
+
+    internal record PlayerInTournamentResult
+    {
+        public string playerId { get; set; } = string.Empty;
+        public string playerName { get; set; } = string.Empty;
+        public int totalPoints { get; set; }
+        public IList<GameResult> games { get; set; } = Array.Empty<GameResult>();
+    }
+
+    internal record GameResult
+    {
+        public int? gamePoints { get; set; }
     }
 
     public class PlayerInRound

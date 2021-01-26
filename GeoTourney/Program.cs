@@ -12,8 +12,8 @@ using Extensions = GeoTourney.Extensions;
 
 // https://www.geoguessr.com/challenge/4AIgheuBiawHesVD
 // https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr
-Regex lessOrMoreThanRegex = new(@"^(elim|revive) (less|more) (than|then) (\d{1,5}?)$");
-Regex lessOrMoreThanFinishGameRegex = new(@"^(less|more) (than|then) (\d{1,5}?)$");
+Regex lessOrMoreThanRegex = new(@"^(elim|revive) (less|more) (than|then) (\d{1,5}?)");
+Regex lessOrMoreThanFinishGameRegex = new(@"^(less|more) (than|then) (\d{1,5}?)");
 var name = typeof(GeoTournament).Assembly.GetName();
 Console.WriteLine($"Starting {name.Name} {GeoTourney.Extensions.GetVersion()}");
 GeoTournament tournament = new();
@@ -203,6 +203,15 @@ while (true)
         {
             var messageToChat = tournament.CurrentGameUrl() ?? "No game running.";
             WriteOutput(activeOutputs, messageToChat);
+        }
+        else if (inputCommand.StartsWith("loadgamefrom"))
+        {
+            var t = await TournamentHistory.CreateTournamentFromUrl(inputCommand);
+            if (t != null)
+            {
+                tournament = t;
+                WriteOutput(activeOutputs, $"Loaded tournament with {t.Games.Count} games.");
+            }
         }
     }
     catch (Exception e)
