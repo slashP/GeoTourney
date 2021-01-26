@@ -11,23 +11,47 @@ namespace GeoTourney
     public static class Github
     {
         const string RequiredScope = "public_repo";
+        const string InvalidTokenMessage = "Github token is not set correctly in appsettings.json file.";
 
         public static async Task<(bool hasAccess, string errorMessage)> VerifyGithubTokenAccess(IConfiguration configuration)
         {
             var client = GitHubClient(configuration);
+            if (client == null)
+            {
+                return (false, InvalidTokenMessage);
+            }
+
             var user = await client.User.Current();
             return !client.GetLastApiInfo().OauthScopes.Contains(RequiredScope)
                 ? (false, $"Github token provided does not have '{RequiredScope}' permission. Go to https://github.com/settings/tokens to create a token or edit an existing one.")
                 : (true, string.Empty);
         }
 
-        public static async Task<string> UploadTournamentData(IConfiguration configuration, string fileContent)
+        public static async Task<string> UploadTournamentData(IConfiguration configuration, GithubTournamentData data, bool includeTotalScore)
         {
             var client = GitHubClient(configuration);
+            if (client == null)
+            {
+                return InvalidTokenMessage;
+            }
+
             var user = await client.User.Current();
             var owner = user.Login.ToLower();
             var repoName = $"{owner}.github.io";
             var repo = await CreateRepositoryIfNotExists(client, owner, repoName);
+            var githubHtmlFilePath = TournamentTemplateGithubPath();
+            var today = Today();
+            var secondsSinceMidnight = (int) (DateTime.Now - DateTime.Today).TotalSeconds;
+            var id = $"{today}/{data.nickname}-{secondsSinceMidnight}";
+            var path = $"geoguessr/{id}.json";
+            await DeleteFilesInFolder(client, repo, $"geoguessr/{today}", file => file.Name.StartsWith(data.nickname));
+            var fileContent = JsonSerializer.Serialize(data);
+            await CreateOrUpdateFile(client, repo, fileContent, path, "Geoguessr tournament.");
+            return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}{TotalScoreQueryString(includeTotalScore)}";
+        }
+
+        static string TournamentTemplateGithubPath()
+        {
             var content = EmbeddedFileHelper.Content("htmlTemplate.html");
             var localSuffix = string.Empty;
 #if DEBUG
@@ -35,11 +59,27 @@ namespace GeoTourney
 #endif
             var version = Extensions.GetMajorMinorVersion();
             var githubHtmlFilePath = $"geoguessr/{version}{localSuffix}/tournament.html";
-            await CreateFileIfNotExists(client, repo, content, githubHtmlFilePath, "File change.");
-            var id = DateTime.Now.Ticks.ToString();
-            var path = $"geoguessr/{id}.json";
-            await CreateFileIfNotExists(client, repo, fileContent, path, "Geoguessr tournament.");
-            return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}";
+            return githubHtmlFilePath;
+        }
+
+        public static async Task CreateOrUpdateTemplates(IConfiguration configuration)
+        {
+            var client = GitHubClient(configuration);
+            if (client == null)
+            {
+                return;
+            }
+
+            var content = EmbeddedFileHelper.Content("htmlTemplate.html");
+            var mapsContent = EmbeddedFileHelper.Content("mapsTemplate.html");
+            var user = await client.User.Current();
+            var owner = user.Login.ToLower();
+            var repoName = $"{owner}.github.io";
+            var repo = await CreateRepositoryIfNotExists(client, owner, repoName);
+            var tournamentFilePath = TournamentTemplateGithubPath();
+
+            await CreateFileIfNotExists(client, repo, content, tournamentFilePath, "Tournament template.");
+            await CreateOrUpdateFile(client, repo, mapsContent, "geoguessr/maps.html", "Maps template.");
         }
 
         public static async Task<string?> UploadMaps(IConfiguration configuration, IReadOnlyCollection<GeoguessrMap> maps)
@@ -47,18 +87,22 @@ namespace GeoTourney
             try
             {
                 var client = GitHubClient(configuration);
+                if (client == null)
+                {
+                    return InvalidTokenMessage;
+                }
+
                 var user = await client.User.Current();
                 var owner = user.Login.ToLower();
                 var repoName = $"{owner}.github.io";
                 var repo = await CreateRepositoryIfNotExists(client, owner, repoName);
-                var content = EmbeddedFileHelper.Content("mapsTemplate.html");
                 var githubHtmlFilePath = "geoguessr/maps.html";
                 var mapsContent = JsonSerializer.Serialize(maps);
                 var id = DateTime.Now.Ticks.ToString();
-                var path = $"geoguessr/maps.{id}.json";
+                var path = $"geoguessr/maps/{id}.json";
 
+                await DeleteFilesInFolder(client, repo, "geoguessr/maps", _ => true);
                 await CreateOrUpdateFile(client, repo, mapsContent, path, "Maps page.");
-                await CreateOrUpdateFile(client, repo, content, githubHtmlFilePath, "Maps page.");
                 return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}";
             }
             catch (Exception e)
@@ -69,11 +113,44 @@ namespace GeoTourney
             return null;
         }
 
-        static GitHubClient GitHubClient(IConfiguration configuration)
+        public static async Task<bool> TournamentExists(IConfiguration configuration, string name)
         {
+            try
+            {
+                var client = GitHubClient(configuration);
+                if (client == null)
+                {
+                    return false;
+                }
+
+                var user = await client.User.Current();
+                var owner = user.Login.ToLower();
+                var repoName = $"{owner}.github.io";
+                var repo = await CreateRepositoryIfNotExists(client, owner, repoName);
+                var files = await client.Repository.Content.GetAllContents(repo.Id, $"geoguessr/{Today()}");
+                return files.Any(x => x.Name == FilenameFromTournamentName(name));
+            }
+            catch (NotFoundException)
+            {
+                return false;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        static GitHubClient? GitHubClient(IConfiguration configuration)
+        {
+            var token = configuration["GithubToken"];
+            if (string.IsNullOrEmpty(token) || token == "GITHUB_TOKEN")
+            {
+                return null;
+            }
+
             var client = new GitHubClient(new ProductHeaderValue("OMHToken"))
             {
-                Credentials = new Credentials(configuration["GithubToken"])
+                Credentials = new Credentials(token)
             };
             return client;
         }
@@ -149,7 +226,29 @@ namespace GeoTourney
             }
         }
 
+        static async Task DeleteFilesInFolder(GitHubClient client, Repository repo, string path, Func<RepositoryContent, bool> nameSelector)
+        {
+            try
+            {
+                var contents = await client.Repository.Content.GetAllContents(repo.Id, path);
+                foreach (var repositoryContent in contents.Where(nameSelector))
+                {
+                    await client.Repository.Content.DeleteFile(repo.Id, repositoryContent.Path,
+                        new DeleteFileRequest("Clean up old files.", repositoryContent.Sha));
+                }
+            }
+            catch (NotFoundException)
+            {
+            }
+        }
+
         static string BranchQueryString(Repository repo) =>
             repo.DefaultBranch != "main" ? $"&branch={repo.DefaultBranch}" : string.Empty;
+
+        static string TotalScoreQueryString(bool includeTotalScore) => includeTotalScore ? "&total=true" : string.Empty;
+
+        static string Today() => $"{DateTime.Now:yyyy-MM-dd}";
+
+        static string FilenameFromTournamentName(string name) => $"{name}.json";
     }
 }

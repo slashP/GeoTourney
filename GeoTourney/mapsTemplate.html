@@ -22,7 +22,7 @@
         const urlSearchParams = new URL(window.location).searchParams;
         const id = urlSearchParams.get("id");
         const branch = urlSearchParams.get("branch") || "main";
-        const url = `https://raw.githubusercontent.com/${githubUsername}/${githubUsername}.github.io/${branch}/geoguessr/maps.${id}.json`;
+        const url = `https://raw.githubusercontent.com/${githubUsername}/${githubUsername}.github.io/${branch}/geoguessr/maps/${id}.json`;
         const response = await fetch(url);
         const data = await response.json();
         maps = data;

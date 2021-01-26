@@ -7,9 +7,9 @@ namespace GeoTourney
 {
     internal class TournamentDataCreator
     {
-        public static string GenerateJsData(List<GeoTournament.GameObject> g, bool includeTotalScore)
+        public static GithubTournamentData GenerateTournamentData(GeoTournament t)
         {
-            var games = g.Select(x =>
+            var games = t.Games.Select(x =>
             {
                 var game = x.PlayerGames.First().game;
                 return new GameData
@@ -35,7 +35,7 @@ namespace GeoTourney
                         r3 = pg.game.player.guesses.Skip(2).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r4 = pg.game.player.guesses.Skip(3).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r5 = pg.game.player.guesses.Skip(4).FirstOrDefault()?.roundScoreInPoints ?? 0,
-                        eliminatedInGame = EliminatedInGameDescription(g, x, pg.userId)
+                        eliminatedInGame = EliminatedInGameDescription(t.Games, x, pg.userId)
                     }).ToList(),
                     answers = game.rounds.Select(r => new AnswerInGame { lat = r.lat, lng = r.lng }).ToArray(),
                     mapName = game.mapName,
@@ -49,25 +49,26 @@ namespace GeoTourney
                     playedWithEliminations = x.PlayedWithEliminations
                 };
             }).OrderByDescending(x => x.gameNumber).ToArray();
-            var tournament = includeTotalScore ? new TournamentResult
+            var tournament = new TournamentResult
             {
-                players = g.SelectMany(x => x.PlayerGames).GroupBy(x => x.userId).Select(x => new PlayerInTournamentResult
+                players = t.Games.SelectMany(x => x.PlayerGames).GroupBy(x => x.userId).Select(x => new PlayerInTournamentResult
                 {
                     playerId = x.Key,
                     playerName = x.First().playerName,
                     totalPoints = x.Sum(y => y.totalScore),
-                    games = g.Select(y => new GameResult
+                    games = t.Games.Select(y => new GameResult
                     {
                         gamePoints = y.PlayerGames.FirstOrDefault(z => z.userId == x.Key)?.totalScore
                     }).ToArray()
                 }).OrderByDescending(x => x.totalPoints).ToArray()
-            } : null;
+            };
             var result = new GithubTournamentData
             {
                 games = games,
-                tournament = tournament
+                tournament = tournament,
+                nickname = t.Nickname
             };
-            return JsonSerializer.Serialize(result);
+            return result;
         }
 
         static string GameDescription(GeoTournament.Game game)
@@ -100,7 +101,7 @@ namespace GeoTourney
         }
     }
 
-    internal record PlayerGameResult
+    public record PlayerGameResult
     {
         public string player { get; set; } = string.Empty;
         public string playerId { get; set; } = string.Empty;
@@ -113,7 +114,7 @@ namespace GeoTourney
         public string? eliminatedInGame { get; set; }
     }
 
-    internal record GameData
+    public record GameData
     {
         public PlayerInRound[][] allGuesses { get; set; } = Array.Empty<PlayerInRound[]>();
         public IList<PlayerGameResult> playerGames { get; set; } = Array.Empty<PlayerGameResult>();
@@ -129,24 +130,25 @@ namespace GeoTourney
         public int? timeLimit { get; set; }
     }
 
-    internal record AnswerInGame
+    public record AnswerInGame
     {
         public decimal lat { get; set; }
         public decimal lng { get; set; }
     }
 
-    internal record GithubTournamentData
+    public record GithubTournamentData
     {
-        public TournamentResult? tournament { get; set; }
+        public string nickname { get; set; } = string.Empty;
+        public TournamentResult tournament { get; set; } = new();
         public IList<GameData> games { get; set; } = Array.Empty<GameData>();
     }
 
-    internal record TournamentResult
+    public record TournamentResult
     {
         public IList<PlayerInTournamentResult> players { get; set; } = Array.Empty<PlayerInTournamentResult>();
     }
 
-    internal record PlayerInTournamentResult
+    public record PlayerInTournamentResult
     {
         public string playerId { get; set; } = string.Empty;
         public string playerName { get; set; } = string.Empty;
@@ -154,7 +156,7 @@ namespace GeoTourney
         public IList<GameResult> games { get; set; } = Array.Empty<GameResult>();
     }
 
-    internal record GameResult
+    public record GameResult
     {
         public int? gamePoints { get; set; }
     }

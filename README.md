@@ -13,6 +13,17 @@ To run the application you need `GeoTourney.exe` and a valid `appsettings.json` 
 
 Download and unzip the `GeoTourney.exe` and `appsettings.json` to a folder of your choice. Open that file in a text editor - now you will replace each of the upper case items with proper values.
 
+###### GITHUB_TOKEN
+
+1. Create a Github account. You can use an existing, but I can't recommend that. The program will put files into a `geoguessr` folder in the [Github Pages](https://pages.github.com/) repository.
+2. After registering, completing the hard reCAPTCHA and signing in, go to https://github.com/settings/tokens and click `Generate new token`.
+3. Check the scope `public_repo`.
+4. Put `Geoguessr Twitch tournament` or similar in the `Note` field so you know what it's for.
+5. Generate token.
+6. Copy the token value and put it into your `appsettings.json` file.
+
+![Create the Github access token](documentation/github_access_token.png "Github access token")
+
 ###### TWITCH_CHANNEL
 This is the streamer's channel/username on Twitch. Example `slashpeek`. The application listens to messages from this channel when it runs.
 
@@ -28,17 +39,6 @@ This is the Twitch account the application will send chat messages on behalf of.
 5. Copy the token value and put it into your `appsettings.json` file.
 
 ![Create the Twitch access token](documentation/twitch_access_token.png "Twitch access token")
-
-###### GITHUB_TOKEN
-
-1. Create a Github account. You can use an existing, but I can't recommend that. The program will put files into a `geoguessr` folder in the [Github Pages](https://pages.github.com/) repository.
-2. After registering, completing the hilariously hard reCAPTCHA and signing in, go to https://github.com/settings/tokens and click `Generate new token`.
-3. Check the scope `public_repo`.
-4. Put `Geoguessr Twitch tournament` or similar in the `Note` field so you know what it's for.
-5. Generate token.
-6. Copy the token value and put it into your `appsettings.json` file.
-
-![Create the Github access token](documentation/github_access_token.png "Github access token")
 
 ### How to use
 1. Run `Geoguessr.exe` by double clicking (or from command line). The first time this will take time as it downloads ~300 MB.

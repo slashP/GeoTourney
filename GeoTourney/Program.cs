@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using GeoTourney;
@@ -16,7 +17,6 @@ Regex lessOrMoreThanRegex = new(@"^(elim|revive) (less|more) (than|then) (\d{1,5
 Regex lessOrMoreThanFinishGameRegex = new(@"^(less|more) (than|then) (\d{1,5}?)");
 var name = typeof(GeoTournament).Assembly.GetName();
 Console.WriteLine($"Starting {name.Name} {GeoTourney.Extensions.GetVersion()}");
-GeoTournament tournament = new();
 var config = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json").Build();
@@ -41,10 +41,14 @@ if (!gihubAccess.hasAccess)
     return;
 }
 
+await Github.CreateOrUpdateTemplates(config);
+
+GeoTournament tournament = new(await NameGenerator.New(config));
+
 var localExampleTournamentPath = config["LocalExampleTournamentPath"];
 if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampleTournamentPath))
 {
-    var url = await Github.UploadTournamentData(config, await File.ReadAllTextAsync(localExampleTournamentPath));
+    var url = await Github.UploadTournamentData(config, JsonSerializer.Deserialize<GithubTournamentData>(await File.ReadAllTextAsync(localExampleTournamentPath))!, false);
     await Clip.SetText(url, "Copied to clipboard");
 }
 
@@ -103,7 +107,7 @@ while (true)
         }
         else if (inputCommand == "restart")
         {
-            tournament = tournament.Restart();
+            tournament = tournament.Restart(await NameGenerator.New(config));
         }
         else if (inputCommand == "gamescore")
         {

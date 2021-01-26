@@ -56,6 +56,13 @@
         "mapCreator": "GeoAlok (YouTube)"
     },
     {
+      "shortcut": "acw",
+      "group": "world",
+      "mapId": "5f235a710d8d410001cfafbd",
+      "mapName": "A Challenging World",
+      "mapCreator": "Kurt - Geoguessr (youtube)"
+    },
+    {
         "shortcut": "abnm",
         "group": "europe",
         "mapId": "5f3933944b63e60001e85762",

@@ -14,12 +14,15 @@ namespace GeoTourney
 
         static readonly EliminationStatus[] StatusesWhereYouCanGetRevived = {EliminationStatus.DidNotPlayGame1, EliminationStatus.Eliminated};
 
-        public GeoTournament()
+        public GeoTournament(string nickname)
         {
             Games = new List<GameObject>();
+            Nickname = nickname;
         }
 
         public List<GameObject> Games { get; }
+
+        public string Nickname { get; }
 
         public string? CurrentGameId { get; set; }
 
@@ -27,9 +30,9 @@ namespace GeoTourney
 
         public GameState GameState { get; set; }
 
-        public GeoTournament Restart()
+        public GeoTournament Restart(string nickname)
         {
-            return new()
+            return new(nickname)
             {
                 PlayWithEliminations = PlayWithEliminations
             };
@@ -84,7 +87,7 @@ namespace GeoTourney
             CurrentGameId = null;
             GameState = GameState.NotActive;
 
-            var url = await GenerateUrlToLatestTournamentInfo(Games.ToList(), config);
+            var url = await GenerateUrlToLatestTournamentInfo(config);
             return $"Game #{newGame.GameNumber} finished. {url}";
         }
 
@@ -188,7 +191,7 @@ namespace GeoTourney
                 case EliminationStatus.StillInTheGame:
                 {
                     currentGame.EliminationStatuses[match.Value.userId] = EliminationStatus.Eliminated;
-                    var url = await GenerateUrlToLatestTournamentInfo(Games, config);
+                    var url = await GenerateUrlToLatestTournamentInfo(config);
                     return $"{match.Value.playerName} eliminated. {url}";
                 }
                 default: throw new ArgumentOutOfRangeException();
@@ -233,7 +236,7 @@ namespace GeoTourney
                 currentGame.EliminationStatuses[matchingPlayer.userId] = newStatus;
             }
 
-            var url = await GenerateUrlToLatestTournamentInfo(Games, config);
+            var url = await GenerateUrlToLatestTournamentInfo(config);
             return $"{matchingPlayers.Count} {"player".Pluralize()} {actionVerb}. {url}";
         }
 
@@ -273,7 +276,7 @@ namespace GeoTourney
                 case EliminationStatus.Eliminated:
                 {
                     currentGame.EliminationStatuses[match.Value.userId] = EliminationStatus.Revived;
-                    var url = await GenerateUrlToLatestTournamentInfo(Games, config);
+                    var url = await GenerateUrlToLatestTournamentInfo(config);
                     return $"{match.Value.playerName} revived. {url}";
                 }
                 case EliminationStatus.Revived:
@@ -322,10 +325,10 @@ namespace GeoTourney
             return matches.GroupBy(x => x.userId).Select(x => (x.Key, x.Last().playerName)).ToList();
         }
 
-        static async Task<string> GenerateUrlToLatestTournamentInfo(List<GameObject> games, IConfiguration configuration)
+        async Task<string> GenerateUrlToLatestTournamentInfo(IConfiguration configuration)
         {
-            var data = TournamentDataCreator.GenerateJsData(games, false);
-            var url = await Github.UploadTournamentData(configuration, data);
+            var data = TournamentDataCreator.GenerateTournamentData(this);
+            var url = await Github.UploadTournamentData(configuration, data, false);
             return url;
         }
 
@@ -352,7 +355,7 @@ namespace GeoTourney
 
         public async Task<string> PrintGameScore(IConfigurationRoot config)
         {
-            return await GenerateUrlToLatestTournamentInfo(Games, config);
+            return await GenerateUrlToLatestTournamentInfo(config);
         }
 
         public async Task<string?> SetCurrentGame(Uri urlToChallenge, Page page, IConfiguration config)
@@ -389,8 +392,8 @@ namespace GeoTourney
 
         public async Task<string> PrintTotalScore(IConfigurationRoot config)
         {
-            var data = TournamentDataCreator.GenerateJsData(Games, true);
-            var url = await Github.UploadTournamentData(config, data);
+            var data = TournamentDataCreator.GenerateTournamentData(this);
+            var url = await Github.UploadTournamentData(config, data, true);
 
             Console.WriteLine(url);
             return url;

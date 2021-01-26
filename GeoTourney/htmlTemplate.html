@@ -57,6 +57,7 @@
         const githubUsername = new URL(window.location).host.split('.')[0];
         const urlSearchParams = new URL(window.location).searchParams;
         const id = urlSearchParams.get("id");
+        const includeTotal = urlSearchParams.get("total") === "true";
         const branch = urlSearchParams.get("branch") || "main";
         const url = `https://raw.githubusercontent.com/${githubUsername}/${githubUsername}.github.io/${branch}/geoguessr/${id}.json`;
         const response = await fetch(url);
@@ -64,7 +65,7 @@
         games = data.games;
         tournament = data.tournament;
         const content = document.getElementById("content");
-        const tournamentHtml = tournament ? createTournamentTable(tournament) : '';
+        const tournamentHtml = includeTotal ? createTournamentTable(tournament) : '';
         content.innerHTML = tournamentHtml + games.map(createGame).join('');
     }
     init();
@@ -230,7 +231,7 @@ Overall round std.dev: ${standardDeviation(allRoundPoints)}`;
 
     const gameExtraInfo = (games, gameIndex, playerInTournament) => {
         const roundPoints = roundPointsInGame(games, gameIndex, playerInTournament);
-        if(roundPoints.length === 0) return '';
+        if (roundPoints.length === 0) return '';
         return `Average round: ${average(roundPoints)}
 
 Round std.dev: ${standardDeviation(roundPoints)}`;
