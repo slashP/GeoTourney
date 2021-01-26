@@ -68,12 +68,13 @@
         content.innerHTML = tournamentHtml + games.map(createGame).join('');
     }
     init();
-    const average = list => Math.trunc(list.reduce((a, v, i) => (a * i + v) / (i + 1)));
+    const average = list => Math.trunc(list.filter(x => x !== null).reduce((a, v, i) => (a * i + v) / (i + 1)));
     const standardDeviation = (arr, usePopulation = false) => {
-        const mean = arr.reduce((acc, val) => acc + val, 0) / arr.length;
+        var entries = arr.filter(x => x !== null);
+        const mean = entries.reduce((acc, val) => acc + val, 0) / entries.length;
         const value = Math.sqrt(
-            arr.reduce((acc, val) => acc.concat((val - mean) ** 2), []).reduce((acc, val) => acc + val, 0) /
-            (arr.length - (usePopulation ? 0 : 1))
+            entries.reduce((acc, val) => acc.concat((val - mean) ** 2), []).reduce((acc, val) => acc + val, 0) /
+            (entries.length - (usePopulation ? 0 : 1))
         );
         return Math.trunc(value);
     };
