@@ -41,6 +41,7 @@ namespace GeoTourney
                     mapName = game.mapName,
                     gameNumber = x.GameNumber,
                     gameUrl = x.GameUrl,
+                    gameId = x.GameId,
                     forbidMoving = game.forbidMoving,
                     forbidRotating = game.forbidRotating,
                     forbidZooming = game.forbidZooming,
@@ -123,6 +124,7 @@ namespace GeoTourney
         public string mapName { get; set; } = string.Empty;
         public int gameNumber { get; set; }
         public Uri? gameUrl { get; set; }
+        public string gameId { get; set; } = string.Empty;
         public string gameDescription { get; set; } = string.Empty;
         public bool playedWithEliminations { get; set; }
         public bool forbidMoving { get; set; }

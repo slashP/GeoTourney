@@ -11,7 +11,6 @@ namespace GeoTourney
 {
     public class GeoguessrApi
     {
-        public const string ChallengeUrlPrefix = "https://www.geoguessr.com/challenge";
         const int MaxApiCallsPerHour = 100;
         const string AuthenticationFilePath = "local-authentication.json";
         static int ErrorMessageCount;
@@ -70,7 +69,7 @@ namespace GeoTourney
             }
         }
 
-        public static async Task<(string? error, string? link)> GenerateChallengeLink(Page page, IConfiguration config, ushort timeLimit, GameMode gameMode, string mapId)
+        public static async Task<(string? error, string? gameId)> GenerateChallengeLink(Page page, IConfiguration config, ushort timeLimit, GameMode gameMode, string mapId)
         {
             var error = await VerifySignedIn(page, config);
             if (error != null)
@@ -118,7 +117,7 @@ namespace GeoTourney
                     return ("Unknown response type", null);
                 }
 
-                return (null, $"{ChallengeUrlPrefix}/{result.token}");
+                return (null, result.token);
             }
             catch (Exception e)
             {
@@ -164,6 +163,10 @@ namespace GeoTourney
 
             return false;
         }
+
+        public static string ChallengeLink(string gameId) => $"https://www.geoguessr.com/challenge/{gameId}";
+
+        public static string ResultsLink(string gameId) => $"https://www.geoguessr.com/results/{gameId}";
 
         static async Task<T?> PostWithFetch<T>(Page page, object requestBody, string path)
         {

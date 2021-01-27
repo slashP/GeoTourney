@@ -15,7 +15,7 @@ namespace GeoTourney
         const string PathToUserDefinedMapDefinitions = "maps.txt";
         static Random random = new();
 
-        public static async Task<(string? error, string? link)> Create(Page page, IConfiguration config, string? mapKey, string? timeDescription, string? gameModeDescription)
+        public static async Task<(string? error, string? gameId)> Create(Page page, IConfiguration config, string? mapKey, string? timeDescription, string? gameModeDescription)
         {
             var timeLimit = TimeLimit(config, timeDescription);
             var gameMode = gameModeDescription == null

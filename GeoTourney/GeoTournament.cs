@@ -79,6 +79,7 @@ namespace GeoTourney
             var newGame = new GameObject
             {
                 GameUrl = new Uri($"https://www.geoguessr.com/results/{CurrentGameId}"),
+                GameId = CurrentGameId!,
                 GameNumber = Games.Count + 1,
                 MapName = playerGames.First().game.mapName,
                 PlayerGames = playerGames,
@@ -361,24 +362,25 @@ namespace GeoTourney
             return await GenerateUrlToLatestTournamentInfo(config);
         }
 
-        public async Task<string?> SetCurrentGame(Uri urlToChallenge, Page page, IConfiguration config)
+        public async Task<string?> SetCurrentGame(string gameId, Page page, IConfiguration config)
         {
             if (GameState == GameState.PendingEliminations)
             {
                 return await EliminateAndFinish(page, config, 0);
             }
 
-            if (IsCurrentGameSameAs(urlToChallenge))
+            if (IsCurrentGameSameAs(gameId))
             {
                 return null;
             }
 
-            var hasNotBeenPlayed = Games.All(x => GameIdFromUrl(x.GameUrl) != GameIdFromUrl(urlToChallenge));
+            var hasNotBeenPlayed = Games.All(x => x.GameId != gameId);
             if (hasNotBeenPlayed)
             {
-                CurrentGameId = GameIdFromUrl(urlToChallenge);
+                CurrentGameId = gameId;
                 GameState = GameState.Running;
                 var currentGameNumber = CurrentGameNumber();
+                var urlToChallenge = GeoguessrApi.ChallengeLink(gameId);
                 return currentGameNumber == 1
                     ? $"First game of tournament \"{Nickname}\": {urlToChallenge} Eliminations are {PlayWithEliminations.ToOnOrOffString()}"
                     : $"Game #{currentGameNumber} {urlToChallenge}";
@@ -387,13 +389,11 @@ namespace GeoTourney
             return "That game URL has already been played.";
         }
 
-        public bool IsCurrentGameSameAs(Uri urlToChallenge) => GameIdFromUrl(urlToChallenge) == CurrentGameId;
+        public bool IsCurrentGameSameAs(string gameId) => gameId == CurrentGameId;
 
         public string? CurrentGameUrl() => CurrentGameId != null
-            ? $"{GeoguessrApi.ChallengeUrlPrefix.TrimEnd('/')}/{CurrentGameId}"
+            ? GeoguessrApi.ChallengeLink(CurrentGameId)
             : null;
-
-        static string? GameIdFromUrl(Uri? urlToChallenge) => urlToChallenge?.PathAndQuery.Split('/').LastOrDefault();
 
         public async Task<string> PrintTotalScore(IConfigurationRoot config)
         {
@@ -432,6 +432,7 @@ namespace GeoTourney
             public Dictionary<string, EliminationStatus> EliminationStatuses { get; set; } = new();
             public string MapName { get; set; } = string.Empty;
             public Uri? GameUrl { get; set; }
+            public string GameId { get; set; } = string.Empty;
             public bool PlayedWithEliminations { get; set; }
         }
 

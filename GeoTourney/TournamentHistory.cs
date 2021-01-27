@@ -22,6 +22,7 @@ namespace GeoTourney
                 {
                     GameNumber = game.gameNumber,
                     GameUrl = game.gameUrl,
+                    GameId = game.gameId,
                     MapName = game.mapName,
                     PlayedWithEliminations = game.playedWithEliminations,
                     PlayerGames = game.playerGames.Select((x, playerIndex) => new GeoTournament.PlayerGame

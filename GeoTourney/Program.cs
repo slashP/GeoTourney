@@ -15,6 +15,8 @@ using Extensions = GeoTourney.Extensions;
 // https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr
 Regex lessOrMoreThanRegex = new(@"^(elim|revive) (less|more) (than|then) (\d{1,5}?)");
 Regex lessOrMoreThanFinishGameRegex = new(@"^(less|more) (than|then) (\d{1,5}?)");
+Regex resultsUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/results\/([a-zA-Z0-9_.-]*)[\/]?$");
+Regex challengeUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/challenge\/([a-zA-Z0-9_.-]*)[\/]?$");
 var name = typeof(GeoTournament).Assembly.GetName();
 Console.WriteLine($"Starting {name.Name} {GeoTourney.Extensions.GetVersion()}");
 var config = new ConfigurationBuilder()
@@ -93,16 +95,31 @@ while (true)
         {
             foreach (var output in activeOutputs) output.KeepAlive();
         }
-        else if (Uri.TryCreate(inputCommand, UriKind.Absolute, out var uri) || Uri.TryCreate(inputCommand.Skip(1).AsString(), UriKind.Absolute, out uri))
+        else if (challengeUrlRegex.IsMatch(inputCommand))
         {
-            if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt && !tournament.IsCurrentGameSameAs(uri))
+            var gameId = challengeUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
+            if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt && !tournament.IsCurrentGameSameAs(gameId))
             {
                 var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !{inputCommand} to ignore.";
                 WriteOutput(activeOutputs, message);
                 continue;
             }
 
-            var messageToChat = await tournament.SetCurrentGame(uri, page, config);
+            var messageToChat = await tournament.SetCurrentGame(gameId, page, config);
+            if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
+        }
+        else if (resultsUrlRegex.IsMatch(inputCommand))
+        {
+            var gameId = resultsUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
+            if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt && !tournament.IsCurrentGameSameAs(gameId))
+            {
+                var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !{inputCommand} to ignore.";
+                WriteOutput(activeOutputs, message);
+                continue;
+            }
+
+            await tournament.SetCurrentGame(gameId, page, config);
+            var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
             if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
         }
         else if (inputCommand == "restart")
@@ -181,15 +198,15 @@ while (true)
             var mapKey = parts.Skip(1).FirstOrDefault();
             var timeDescription = parts.Skip(2).FirstOrDefault();
             var gameModeDescription = parts.Skip(3).FirstOrDefault();
-            var (error, link) = await GeoguessrChallenge.Create(page, config, mapKey, timeDescription, gameModeDescription);
+            var (error, gameId) = await GeoguessrChallenge.Create(page, config, mapKey, timeDescription, gameModeDescription);
             if (error != null)
             {
                 WriteOutput(activeOutputs, error);
             }
 
-            if (link != null)
+            if (gameId != null)
             {
-                var messageToChat = await tournament.SetCurrentGame(new Uri(link), page, config);
+                var messageToChat = await tournament.SetCurrentGame(gameId, page, config);
                 if (messageToChat != null) WriteOutput(activeOutputs, messageToChat);
             }
         }
@@ -238,10 +255,10 @@ while (true)
     }
 }
 
-static void OnMessageReceived(object? sender, string? e)
+void OnMessageReceived(object? sender, string? e)
 {
     var message = e ?? string.Empty;
-    if (message.StartsWith(GeoguessrApi.ChallengeUrlPrefix) || message.StartsWith($"!{GeoguessrApi.ChallengeUrlPrefix}"))
+    if (challengeUrlRegex.IsMatch(message) || resultsUrlRegex.IsMatch(message))
         ReadConsole.QueueCommand(message);
     else if (message.StartsWith("!")) ReadConsole.QueueCommand(message.Skip(1).AsString());
     else if(int.TryParse(message, out var number) && number >= 0) ReadConsole.QueueCommand(number.ToString());
