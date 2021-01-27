@@ -43,7 +43,7 @@ if (!gihubAccess.hasAccess)
 
 await Github.CreateOrUpdateTemplates(config);
 
-GeoTournament tournament = new(await NameGenerator.New(config));
+GeoTournament tournament = new(await NameGenerator.New(config), DateTime.UtcNow);
 
 var localExampleTournamentPath = config["LocalExampleTournamentPath"];
 if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampleTournamentPath))
@@ -130,7 +130,7 @@ while (true)
         else if (inputCommand == "elim")
         {
             var message = await tournament.ToggleEliminations(page, config);
-            WriteOutput(activeOutputs, $"Eliminations are now {(tournament.PlayWithEliminations ? "ON" : "OFF")}.");
+            WriteOutput(activeOutputs, $"Eliminations are now {tournament.PlayWithEliminations.ToOnOrOffString()}.");
             await Task.Delay(TimeSpan.FromSeconds(2));
             if(message != null) WriteOutput(activeOutputs, message);
         }

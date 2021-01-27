@@ -31,6 +31,8 @@ namespace GeoTourney
 
         public static string HtmlEncode(this string text) => HttpUtility.HtmlEncode(text);
 
+        public static string ToOnOrOffString(this bool val) => val ? "ON" : "OFF";
+
         public static string GetVersion()
         {
             var version = Version();

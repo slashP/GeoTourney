@@ -66,7 +66,8 @@ namespace GeoTourney
             {
                 games = games,
                 tournament = tournament,
-                nickname = t.Nickname
+                nickname = t.Nickname,
+                startTimeUtc = t.StartTimeUtc
             };
             return result;
         }
@@ -139,6 +140,7 @@ namespace GeoTourney
     public record GithubTournamentData
     {
         public string nickname { get; set; } = string.Empty;
+        public DateTime startTimeUtc { get; set; }
         public TournamentResult tournament { get; set; } = new();
         public IList<GameData> games { get; set; } = Array.Empty<GameData>();
     }

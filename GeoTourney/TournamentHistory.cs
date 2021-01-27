@@ -14,7 +14,7 @@ namespace GeoTourney
             var client = new HttpClient();
             var data = await client.GetFromJsonAsync<GithubTournamentData>(url);
             if (data == null) return null;
-            var tournament = new GeoTournament(data.nickname);
+            var tournament = new GeoTournament(data.nickname, data.startTimeUtc);
             var playerIds = data.games.SelectMany(g => g.playerGames.Select(x => x.playerId)).Distinct().ToList();
             foreach (var game in data.games)
             {

@@ -14,10 +14,11 @@ namespace GeoTourney
 
         static readonly EliminationStatus[] StatusesWhereYouCanGetRevived = {EliminationStatus.DidNotPlayGame1, EliminationStatus.Eliminated};
 
-        public GeoTournament(string nickname)
+        public GeoTournament(string nickname, DateTime startTimeUtc)
         {
             Games = new List<GameObject>();
             Nickname = nickname;
+            StartTimeUtc = startTimeUtc;
         }
 
         public List<GameObject> Games { get; }
@@ -30,9 +31,11 @@ namespace GeoTourney
 
         public GameState GameState { get; set; }
 
+        public DateTime StartTimeUtc { get; }
+
         public GeoTournament Restart(string nickname)
         {
-            return new(nickname)
+            return new(nickname, DateTime.UtcNow)
             {
                 PlayWithEliminations = PlayWithEliminations
             };
@@ -376,7 +379,9 @@ namespace GeoTourney
                 CurrentGameId = GameIdFromUrl(urlToChallenge);
                 GameState = GameState.Running;
                 var currentGameNumber = CurrentGameNumber();
-                return $"Game #{currentGameNumber}: {urlToChallenge}";
+                return currentGameNumber == 1
+                    ? $"First game of tournament \"{Nickname}\": {urlToChallenge} Eliminations are {PlayWithEliminations.ToOnOrOffString()}"
+                    : $"Game #{currentGameNumber} {urlToChallenge}";
             }
 
             return "That game URL has already been played.";
