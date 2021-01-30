@@ -62,5 +62,20 @@ namespace GeoTourney
             dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
             return dtDateTime;
         }
+
+        public static string? GetFromQueryString(string queryString, string part)
+        {
+            Dictionary<string, string> rc = new();
+            string[] ar1 = queryString.Split(new[] { '&', '?' });
+            foreach (string row in ar1)
+            {
+                if (string.IsNullOrEmpty(row)) continue;
+                var index = row.IndexOf('=');
+                if (index < 0) continue;
+                rc[Uri.UnescapeDataString(row.Substring(0, index))] = Uri.UnescapeDataString(row.Substring(index + 1));
+            }
+
+            return rc.TryGetValue(part, out var value) ? value : null;
+        }
     }
 }

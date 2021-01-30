@@ -18,7 +18,7 @@ namespace GeoTourney
         static string[] Scopes = { SheetsService.Scope.Spreadsheets };
         static string ApplicationName = "GeoTourney";
 
-        public static async Task<string> Create(GeoTournament tournament)
+        public static async Task<string> Create(GeoTournament tournament, string? filenameSourceForCommand)
         {
             UserCredential credential;
 
@@ -49,6 +49,11 @@ namespace GeoTourney
             }).ToList();
             var typesOfDataBackgroundColor = System.Drawing.Color.CornflowerBlue;
             var totalsBackground = System.Drawing.Color.Cornsilk;
+            var initialTournamentRows = new[]
+            {
+                RowData(tournament.CurrentGithubResultsPageUrl, Array.Empty<string>()),
+                new RowData()
+            };
             var rows = players.SelectMany(x =>
             {
                 var games = tournament.Games;
@@ -86,15 +91,15 @@ namespace GeoTourney
                     new RowData(),
                     new RowData(),
                 };
-            }).ToList();
+            });
             var sheet = new Sheet
             {
-                Properties = new SheetProperties {Title = "Sheet1"},
+                Properties = new SheetProperties {Title = Path.GetFileNameWithoutExtension(filenameSourceForCommand) ?? "Sheet1"},
                 Data = new List<GridData>
                 {
                     new()
                     {
-                        RowData = rows
+                        RowData = initialTournamentRows.Concat(rows).ToList()
                     }
                 }
             };

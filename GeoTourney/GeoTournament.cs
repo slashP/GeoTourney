@@ -27,6 +27,8 @@ namespace GeoTourney
 
         public string? CurrentGameId { get; set; }
 
+        public string? CurrentGithubResultsPageUrl { get; set; }
+
         public bool PlayWithEliminations { get; private set; }
 
         public GameState GameState { get; set; }
@@ -333,6 +335,7 @@ namespace GeoTourney
         {
             var data = TournamentDataCreator.GenerateTournamentData(this);
             var url = await Github.UploadTournamentData(configuration, data, false);
+            CurrentGithubResultsPageUrl = url;
             return url;
         }
 
@@ -357,7 +360,7 @@ namespace GeoTourney
             Console.WriteLine(ConsoleTable.From(rows).ToMinimalString());
         }
 
-        public async Task<string> PrintGameScore(IConfigurationRoot config)
+        public async Task<string> PrintGameScore(IConfiguration config)
         {
             return await GenerateUrlToLatestTournamentInfo(config);
         }
@@ -395,7 +398,7 @@ namespace GeoTourney
             ? GeoguessrApi.ChallengeLink(CurrentGameId)
             : null;
 
-        public async Task<string> PrintTotalScore(IConfigurationRoot config)
+        public async Task<string> PrintTotalScore(IConfiguration config)
         {
             var data = TournamentDataCreator.GenerateTournamentData(this);
             var url = await Github.UploadTournamentData(config, data, true);

@@ -8,13 +8,16 @@ namespace GeoTourney
 {
     public class TournamentHistory
     {
-        public static async Task<GeoTournament?> CreateTournamentFromUrl(string inputCommand)
+        public static async Task<GeoTournament?> CreateTournamentFromUrl(string username, string id, string originalUrl)
         {
-            var url = new Uri(inputCommand.Split(' ').Last(), UriKind.Absolute);
+            var url = $"https://raw.githubusercontent.com/{username}/{username}.github.io/main/geoguessr/{id}.json";
             var client = new HttpClient();
             var data = await client.GetFromJsonAsync<GithubTournamentData>(url);
             if (data == null) return null;
-            var tournament = new GeoTournament(data.nickname, data.startTimeUtc);
+            var tournament = new GeoTournament(data.nickname, data.startTimeUtc)
+            {
+                CurrentGithubResultsPageUrl = originalUrl
+            };
             var playerIds = data.games.SelectMany(g => g.playerGames.Select(x => x.playerId)).Distinct().ToList();
             foreach (var game in data.games)
             {
