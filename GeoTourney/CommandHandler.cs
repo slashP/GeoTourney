@@ -18,7 +18,7 @@ namespace GeoTourney
         static readonly Regex LessOrMoreThanFinishGameRegex = new(@"^(less|more) (than|then) (\d{1,5}?)");
         static readonly Regex ResultsUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/results\/([a-zA-Z0-9_.-]*)[\/]?$");
         static readonly Regex ChallengeUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/challenge\/([a-zA-Z0-9_.-]*)[\/]?$");
-        static readonly Regex LoadGameFromUrlRegex = new(@"^loadgamefrom https:\/\/([\a-z]*).github.io\/");
+        static readonly Regex LoadTournamentFromUrlRegex = new(@"^loadtournamentfrom https:\/\/([\a-z]*).github.io\/");
 
         static readonly IGameEventOutput[] GameEventOutputs =
         {
@@ -182,9 +182,9 @@ namespace GeoTourney
                     var messageToChat = tournament.CurrentGameUrl() ?? "No game running.";
                     WriteOutput(messageToChat);
                 }
-                else if (LoadGameFromUrlRegex.IsMatch(inputCommand))
+                else if (LoadTournamentFromUrlRegex.IsMatch(inputCommand))
                 {
-                    var username = LoadGameFromUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
+                    var username = LoadTournamentFromUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
                     var url = inputCommand.Split(' ').Skip(1).First();
                     var id = Extensions.GetFromQueryString(new Uri(url).Query, "id");
                     if (id == null)
