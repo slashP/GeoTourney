@@ -465,6 +465,8 @@ namespace GeoTourney
         public record Player
         {
             public string id { get; set; } = string.Empty;
+            public decimal totalDistanceInMeters { get; set; }
+            public decimal totalTime { get; set; }
             public Guess[] guesses { get; set; } = Array.Empty<Guess>();
         }
 
@@ -472,6 +474,7 @@ namespace GeoTourney
         {
             public decimal distanceInMeters { get; set; }
             public int roundScoreInPoints { get; set; }
+            public decimal time { get; set; }
             public decimal lat { get; set; }
             public decimal lng { get; set; }
         }

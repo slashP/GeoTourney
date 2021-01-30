@@ -35,12 +35,16 @@ namespace GeoTourney
                             player = new GeoTournament.Player
                             {
                                 id = x.playerId,
-                                guesses = game.allGuesses.Select((g, guessIndex) => new GeoTournament.Guess
+                                guesses = game.allGuesses.Select(g => new GeoTournament.Guess
                                 {
                                     lat = g[playerIndex].lat,
                                     lng = g[playerIndex].lng,
-                                    roundScoreInPoints = RoundScore(guessIndex, x)
-                                }).ToArray()
+                                    roundScoreInPoints = g[playerIndex].roundScoreInPoints,
+                                    distanceInMeters = g[playerIndex].distanceInMeters,
+                                    time = g[playerIndex].time
+                                }).ToArray(),
+                                totalDistanceInMeters = x.totalDistanceInMeters,
+                                totalTime = x.totalTime
                             },
                             mapName = game.mapName,
                             rounds = game.answers.Select(a => new GeoTournament.Round
@@ -60,16 +64,5 @@ namespace GeoTourney
 
             return tournament;
         }
-
-        static int RoundScore(int i, PlayerGameResult x) =>
-            i switch
-            {
-                0 => x.r1,
-                1 => x.r2,
-                2 => x.r3,
-                3 => x.r4,
-                4 => x.r5,
-                _ => throw new ArgumentException()
-            };
     }
 }

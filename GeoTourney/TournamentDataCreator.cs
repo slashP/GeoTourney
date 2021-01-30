@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 
 namespace GeoTourney
 {
@@ -22,6 +21,7 @@ namespace GeoTourney
                                 playerId = p.userId,
                                 roundScoreInPoints = p.game.player.guesses[i].roundScoreInPoints,
                                 distanceInMeters = p.game.player.guesses[i].distanceInMeters,
+                                time = p.game.player.guesses[i].time,
                                 lat = p.game.player.guesses[i].lat,
                                 lng = p.game.player.guesses[i].lng
                             }).ToArray()).ToArray(),
@@ -30,6 +30,8 @@ namespace GeoTourney
                         player = pg.playerName,
                         playerId = pg.userId,
                         points = pg.totalScore,
+                        totalDistanceInMeters = pg.game.player.totalDistanceInMeters,
+                        totalTime = pg.game.player.totalTime,
                         r1 = pg.game.player.guesses.Skip(0).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r2 = pg.game.player.guesses.Skip(1).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         r3 = pg.game.player.guesses.Skip(2).FirstOrDefault()?.roundScoreInPoints ?? 0,
@@ -114,6 +116,8 @@ namespace GeoTourney
         public int r4 { get; set; }
         public int r5 { get; set; }
         public string? eliminatedInGame { get; set; }
+        public decimal totalDistanceInMeters { get; set; }
+        public decimal totalTime { get; set; }
     }
 
     public record GameData
@@ -171,6 +175,7 @@ namespace GeoTourney
         public string playerId { get; set; } = string.Empty;
         public int roundScoreInPoints { get; set; }
         public decimal distanceInMeters { get; set; }
+        public decimal time { get; set; }
         public decimal lat { get; set; }
         public decimal lng { get; set; }
     }

@@ -252,3 +252,4 @@ Projects/Komplett.Payments.Api/redirect.*
 .local-chromium/
 logs/
 appsettings.json
+credentials.json

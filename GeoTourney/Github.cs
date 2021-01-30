@@ -44,7 +44,7 @@ namespace GeoTourney
             var secondsSinceMidnight = (int) (DateTime.Now - DateTime.Today).TotalSeconds;
             var id = $"{today}/{data.nickname}-{secondsSinceMidnight}";
             var path = $"geoguessr/{id}.json";
-            await DeleteFilesInFolder(client, repo, $"geoguessr/{today}", file => file.Name.StartsWith(data.nickname));
+            await DeleteFilesInFolder(client, repo, $"geoguessr/{today}", file => !string.IsNullOrEmpty(data.nickname) && file.Name.StartsWith(data.nickname));
             var fileContent = JsonSerializer.Serialize(data);
             await CreateOrUpdateFile(client, repo, fileContent, path, "Geoguessr tournament.");
             return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}{TotalScoreQueryString(includeTotalScore)}";
