@@ -15,7 +15,13 @@ namespace GeoTourney
         const string PathToUserDefinedMapDefinitions = "maps.txt";
         static Random random = new();
 
-        public static async Task<(string? error, string? gameId)> Create(Page page, IConfiguration config, string? mapKey, string? timeDescription, string? gameModeDescription)
+        public static async Task<(string? error, string? gameId, string? mapId)> Create(
+            Page page,
+            IConfiguration config,
+            string? mapKey,
+            string? timeDescription,
+            string? gameModeDescription,
+            IReadOnlyCollection<string> mapIdsPlayed)
         {
             var timeLimit = TimeLimit(config, timeDescription);
             var gameMode = gameModeDescription == null
@@ -25,13 +31,13 @@ namespace GeoTourney
             {
                 var validGameModes = Enum.GetValues<GeoguessrApi.GameMode>()
                     .Except(new[] {GeoguessrApi.GameMode.Invalid}).Select(x => x.ToString().ToLower());
-                return ($"Game mode {gameModeDescription} not known. One of {string.Join(", ", validGameModes)}", null);
+                return ($"Game mode {gameModeDescription} not known. One of {string.Join(", ", validGameModes)}", null, null);
             }
 
-            var mapId = await FindMapId((mapKey ?? string.Empty).ToLower());
+            var mapId = await FindMapId((mapKey ?? string.Empty).ToLower(), mapIdsPlayed);
             if (mapId == null)
             {
-                return ($"Couldn't find map for {mapKey}.", null);
+                return ($"Couldn't find map for {mapKey}.", null, null);
             }
 
             return await GeoguessrApi.GenerateChallengeLink(page, config, timeLimit, gameMode, mapId);
@@ -51,12 +57,12 @@ namespace GeoTourney
             return userMaps.Concat(maps).ToList();
         }
 
-        static async Task<string?> FindMapId(string mapKey)
+        static async Task<string?> FindMapId(string mapKey, IReadOnlyCollection<string> mapIdsPlayed)
         {
             var userDefinedMaps = await GetUserDefinedMaps();
             var userEntriesAsDictionary = userDefinedMaps.ToLookup(x => x.MapKey, x => (mapId: x.MapId, (string?)x.Group))
                 .ToDictionary(x => x.Key, x => x.First());
-            var match = FindMapThatMatches(mapKey, userEntriesAsDictionary, ProgramMaps());
+            var match = FindMapThatMatches(mapKey, userEntriesAsDictionary, ProgramMaps(), mapIdsPlayed);
             return match;
         }
 
@@ -73,10 +79,10 @@ namespace GeoTourney
             return valid;
         }
 
-        static string? FindMapThatMatches(
-            string mapKey,
-            Dictionary<string, (string mapId, string? group)> userEntriesAsDictionary,
-            Dictionary<string, (string mapId, string group)> programEntries)
+        static string? FindMapThatMatches(string mapKey,
+            Dictionary<string, (string mapId, string? @group)> userEntriesAsDictionary,
+            Dictionary<string, (string mapId, string @group)> programEntries,
+            IReadOnlyCollection<string> mapIdsPlayed)
         {
             if (mapKey.StartsWith("random"))
             {
@@ -87,8 +93,9 @@ namespace GeoTourney
                 Func<(string mapId, string group), bool> selector2 = string.IsNullOrEmpty(takeFromGroup)
                     ? _ => true
                     : tuple => tuple.group == takeFromGroup;
-                var selectRandomFrom = userEntriesAsDictionary.Values.Where(selector).Select(x => x.mapId)
+                var randomCandidates = userEntriesAsDictionary.Values.Where(selector).Select(x => x.mapId)
                     .Concat(programEntries.Values.Where(selector2).Select(x => x.mapId)).Distinct().ToList();
+                var selectRandomFrom = randomCandidates.Except(mapIdsPlayed).NullIfEmpty()?.ToList() ?? randomCandidates;
                 return selectRandomFrom.Any() ? selectRandomFrom[random.Next(selectRandomFrom.Count)] : null;
             }
             var match = userEntriesAsDictionary.TryGetValue(mapKey, out var userMap) ? userMap :

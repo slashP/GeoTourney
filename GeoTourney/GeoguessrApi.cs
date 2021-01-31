@@ -69,18 +69,18 @@ namespace GeoTourney
             }
         }
 
-        public static async Task<(string? error, string? gameId)> GenerateChallengeLink(Page page, IConfiguration config, ushort timeLimit, GameMode gameMode, string mapId)
+        public static async Task<(string? error, string? gameId, string? mapId)> GenerateChallengeLink(Page page, IConfiguration config, ushort timeLimit, GameMode gameMode, string mapId)
         {
             var error = await VerifySignedIn(page, config);
             if (error != null)
             {
-                return (error, null);
+                return (error, null, null);
             }
 
             var limitPerHour = ChallengeLinkCallsPerHour;
             if (limitPerHour.IsFull())
             {
-                return (RateLimitResponse(), null);
+                return (RateLimitResponse(), null, null);
             }
 
             try
@@ -114,15 +114,15 @@ namespace GeoTourney
                 var result = await PostWithFetch<ChallengeApiResult>(page, requestBody, "challenges");
                 if (result == null)
                 {
-                    return ("Unknown response type", null);
+                    return ("Unknown response type", null, null);
                 }
 
-                return (null, result.token);
+                return (null, result.token, mapId);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                return ("Unexpected error.", null);
+                return ("Unexpected error.", null, null);
             }
         }
 

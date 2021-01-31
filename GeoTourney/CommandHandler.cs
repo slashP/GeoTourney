@@ -62,7 +62,7 @@ namespace GeoTourney
                         return;
                     }
 
-                    var messageToChat = await tournament.SetCurrentGame(gameId, page, config);
+                    var messageToChat = await tournament.SetCurrentGame(gameId, page, config, null);
                     if (messageToChat != null) WriteOutput(messageToChat);
                 }
                 else if (ResultsUrlRegex.IsMatch(inputCommand))
@@ -75,7 +75,7 @@ namespace GeoTourney
                         return;
                     }
 
-                    await tournament.SetCurrentGame(gameId, page, config);
+                    await tournament.SetCurrentGame(gameId, page, config, null);
                     var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
                     if (messageToChat != null) WriteOutput(messageToChat);
                 }
@@ -155,7 +155,12 @@ namespace GeoTourney
                     var mapKey = parts.Skip(1).FirstOrDefault();
                     var timeDescription = parts.Skip(2).FirstOrDefault();
                     var gameModeDescription = parts.Skip(3).FirstOrDefault();
-                    var (error, gameId) = await GeoguessrChallenge.Create(page, config, mapKey, timeDescription, gameModeDescription);
+                    var groupedPlayedMaps = tournament.Games
+                        .Select(x => x.MapId).Where(x => x != null).Select(x => x!)
+                        .GroupBy(x => x).ToArray();
+                    var maxPlayCount = groupedPlayedMaps.Any() ? groupedPlayedMaps.Max(x => x.Count()) : 0;
+                    var mapIdsPlayed = groupedPlayedMaps.Where(x => x.Count() == maxPlayCount).Select(x => x.Key).ToList();
+                    var (error, gameId, mapId) = await GeoguessrChallenge.Create(page, config, mapKey, timeDescription, gameModeDescription, mapIdsPlayed);
                     if (error != null)
                     {
                         WriteOutput(error);
@@ -163,7 +168,7 @@ namespace GeoTourney
 
                     if (gameId != null)
                     {
-                        var messageToChat = await tournament.SetCurrentGame(gameId, page, config);
+                        var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId);
                         if (messageToChat != null) WriteOutput(messageToChat);
                     }
                 }

@@ -25,6 +25,8 @@ namespace GeoTourney
             }
         }
 
+        public static IEnumerable<T>? NullIfEmpty<T>(this IEnumerable<T> source) => source.Any() ? source : null;
+
         public static string AsString(this IEnumerable<char> characters) => new(characters.ToArray());
 
         public static string Pluralize(this string text) => text?.Length == 1 ? text : $"{text}s";

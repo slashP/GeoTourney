@@ -27,6 +27,8 @@ namespace GeoTourney
 
         public string? CurrentGameId { get; set; }
 
+        public string? CurrentMapId { get; set; }
+
         public string? CurrentGithubResultsPageUrl { get; set; }
 
         public bool PlayWithEliminations { get; private set; }
@@ -82,6 +84,7 @@ namespace GeoTourney
             {
                 GameUrl = new Uri($"https://www.geoguessr.com/results/{CurrentGameId}"),
                 GameId = CurrentGameId!,
+                MapId = CurrentMapId,
                 GameNumber = Games.Count + 1,
                 MapName = playerGames.First().game.mapName,
                 PlayerGames = playerGames,
@@ -365,7 +368,7 @@ namespace GeoTourney
             return await GenerateUrlToLatestTournamentInfo(config);
         }
 
-        public async Task<string?> SetCurrentGame(string gameId, Page page, IConfiguration config)
+        public async Task<string?> SetCurrentGame(string gameId, Page page, IConfiguration config, string? mapId)
         {
             if (GameState == GameState.PendingEliminations)
             {
@@ -381,6 +384,7 @@ namespace GeoTourney
             if (hasNotBeenPlayed)
             {
                 CurrentGameId = gameId;
+                CurrentMapId = mapId;
                 GameState = GameState.Running;
                 var currentGameNumber = CurrentGameNumber();
                 var urlToChallenge = GeoguessrApi.ChallengeLink(gameId);
@@ -436,6 +440,7 @@ namespace GeoTourney
             public string MapName { get; set; } = string.Empty;
             public Uri? GameUrl { get; set; }
             public string GameId { get; set; } = string.Empty;
+            public string? MapId { get; set; }
             public bool PlayedWithEliminations { get; set; }
         }
 
