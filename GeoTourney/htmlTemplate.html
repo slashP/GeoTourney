@@ -12,7 +12,8 @@
           crossorigin="" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
     <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inconsolata&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inconsolata&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css">
     <style>
         body {
             background: #808080;
@@ -91,6 +92,15 @@
     const numberFormat = new Intl.NumberFormat();
     let allMaps = [];
     let lastRoundIndexSelected = [];
+    const createActualLocationLink = (answer, defaultText) => {
+        const linkText = answer.countryCode ? `<span title="${answer.countryName}" class="flag-icon flag-icon-${answer.countryCode.toLowerCase()}"></span>` : defaultText;
+        return linkText && `<a href='https://maps.google.com/maps?q=&layer=c&cbll=${answer.lat},${answer.lng}' target="_blank" rel="noreferrer noopener">${linkText}</a>`;
+    }
+
+    const createFlagLocationLink = answer => {
+        const linkHtml = createActualLocationLink(answer);
+        return linkHtml ? `<span style="margin-left: 7px;">${linkHtml}</span>` : '';    }
+
     const viewRound = (gameNumber, roundIndex = 0) => {
         lastRoundIndexSelected[gameNumber] = roundIndex;
         var game = games.filter(x => x.gameNumber === gameNumber)[0];
@@ -142,7 +152,7 @@
                     icon: new L.NumberedDivIcon({ number: null, iconUrl: "https://i.imgur.com/uS6hKqq.png" }),
                 });
             answerMarker
-                .bindPopup(`<a href='https://maps.google.com/maps?q=&layer=c&cbll=${answer.lat},${answer.lng}' target="_blank" rel="noreferrer noopener">Actual location</a>`)
+                .bindPopup(createActualLocationLink(answer, 'Actual location'))
                 .addTo(map);
             allMaps[`${gameNumber}-${roundIndex}`] = existingMap = { map: map, markers: markers, answerMarker: answerMarker };
         }
@@ -263,11 +273,11 @@ ${game.playedWithEliminations ? `<td class="text-right">${playerGame.eliminatedI
                 <th>Player</th>
                 ${game.playedWithEliminations ? '<th class="text-right">Eliminated in game</th>' : ''}
                 <th class="text-right">Points</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)"><button class="btn btn-sm btn-outline-primary">R1</button></th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)"><button class="btn btn-sm btn-outline-primary">R2</button></th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 2)"><button class="btn btn-sm btn-outline-primary">R3</button></th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)"><button class="btn btn-sm btn-outline-primary">R4</button></th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)"><button class="btn btn-sm btn-outline-primary">R5</button></th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)"><button class="btn btn-sm btn-outline-primary">R1</button>${createFlagLocationLink(game.answers[0])}</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)"><button class="btn btn-sm btn-outline-primary">R2</button>${createFlagLocationLink(game.answers[1])}</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 2)"><button class="btn btn-sm btn-outline-primary">R3</button>${createFlagLocationLink(game.answers[2])}</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)"><button class="btn btn-sm btn-outline-primary">R4</button>${createFlagLocationLink(game.answers[3])}</th>
+                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)"><button class="btn btn-sm btn-outline-primary">R5</button>${createFlagLocationLink(game.answers[4])}</th>
             </tr>
 ${game.playerGames.map((pg, i) => createGameRow(game, pg, i)).join('')}
 </table>

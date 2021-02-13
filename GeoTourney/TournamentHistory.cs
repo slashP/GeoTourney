@@ -61,7 +61,14 @@ namespace GeoTourney
                             timeLimit = game.timeLimit,
                         }
                     }).ToList(),
-                    EliminationStatuses = playerIds.ToDictionary(x => x, _ => EliminationStatus.StillInTheGame)
+                    EliminationStatuses = playerIds.ToDictionary(x => x, _ => EliminationStatus.StillInTheGame),
+                    RoundLocations = game.answers.Select(a => new RoundLocation
+                    {
+                        lat = a.lat,
+                        lng = a.lng,
+                        countryCode = a.countryCode,
+                        countryName = a.countryName
+                    }).ToArray()
                 });
             }
 

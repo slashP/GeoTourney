@@ -80,16 +80,19 @@ namespace GeoTourney
             var eliminationStatuses = Games.SelectMany(x => x.PlayerGames.Select(y => y.userId))
                 .Concat(playerGames.Select(y => y.userId)).Distinct().ToDictionary(id => id,
                     id => NewEliminationStatus(userIdsEliminated, id));
+            var game = playerGames.First().game;
+            var locations = await GeocodingClient.Locations(config, game.rounds);
             var newGame = new GameObject
             {
                 GameUrl = new Uri($"https://www.geoguessr.com/results/{CurrentGameId}"),
                 GameId = CurrentGameId!,
                 MapId = CurrentMapId,
                 GameNumber = Games.Count + 1,
-                MapName = playerGames.First().game.mapName,
+                MapName = game.mapName,
                 PlayerGames = playerGames,
                 EliminationStatuses = eliminationStatuses,
-                PlayedWithEliminations = PlayWithEliminations
+                PlayedWithEliminations = PlayWithEliminations,
+                RoundLocations = locations
             };
             Games.Add(newGame);
 
@@ -442,6 +445,7 @@ namespace GeoTourney
             public string GameId { get; set; } = string.Empty;
             public string? MapId { get; set; }
             public bool PlayedWithEliminations { get; set; }
+            public IReadOnlyCollection<RoundLocation> RoundLocations { get; set; } = Array.Empty<RoundLocation>();
         }
 
         public record PlayerGame

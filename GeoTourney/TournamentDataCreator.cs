@@ -39,7 +39,7 @@ namespace GeoTourney
                         r5 = pg.game.player.guesses.Skip(4).FirstOrDefault()?.roundScoreInPoints ?? 0,
                         eliminatedInGame = EliminatedInGameDescription(t.Games, x, pg.userId)
                     }).ToList(),
-                    answers = game.rounds.Select(r => new AnswerInGame { lat = r.lat, lng = r.lng }).ToArray(),
+                    answers = x.RoundLocations.Select(r => new AnswerInGame { lat = r.lat, lng = r.lng, countryCode = r.countryCode, countryName = r.countryName }).ToArray(),
                     mapName = game.mapName,
                     gameNumber = x.GameNumber,
                     gameUrl = x.GameUrl,
@@ -141,6 +141,8 @@ namespace GeoTourney
     {
         public decimal lat { get; set; }
         public decimal lng { get; set; }
+        public string? countryCode { get; set; }
+        public string? countryName { get; set; }
     }
 
     public record GithubTournamentData
