@@ -69,7 +69,7 @@ namespace GeoTourney
 
                 void Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
                 {
-                    if (e.ChatMessage.IsBroadcaster)
+                    if (e.ChatMessage.IsBroadcaster || e.ChatMessage.IsModerator)
                     {
                         _onMessageReceived?.Invoke(null, e.ChatMessage.Message);
                     }

@@ -46,7 +46,7 @@ This is the Twitch account the application will send chat messages on behalf of.
 3. Create a game by sending a challenge links to the Twitch chat you're hosting, f.ex. `https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr` or let the program do it. See "Game/challenge creation below".
 4. The bot responds with `Game #1: https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr`.
 5. Play the challenge. Then send `!endgame` in the chat when you're ready. The bot will post a link to results page, f.ex. https://slashpeekbot.github.io/geoguessr/v4.7/tournament.html?id=637451944357099056
-6. Commands. These commands only work for the streamer/broadcaster.
+6. Commands. These commands work for the streamer and moderators.
   * `!totalscore` to get a results page with all games and points summed.
   * `!restart` to forget current tournament and start over.
   * `!endgame` to end the current game and record results.
