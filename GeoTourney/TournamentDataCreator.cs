@@ -32,11 +32,12 @@ namespace GeoTourney
                         points = pg.totalScore,
                         totalDistanceInMeters = pg.game.player.totalDistanceInMeters,
                         totalTime = pg.game.player.totalTime,
-                        r1 = pg.game.player.guesses.Skip(0).FirstOrDefault()?.roundScoreInPoints ?? 0,
-                        r2 = pg.game.player.guesses.Skip(1).FirstOrDefault()?.roundScoreInPoints ?? 0,
-                        r3 = pg.game.player.guesses.Skip(2).FirstOrDefault()?.roundScoreInPoints ?? 0,
-                        r4 = pg.game.player.guesses.Skip(3).FirstOrDefault()?.roundScoreInPoints ?? 0,
-                        r5 = pg.game.player.guesses.Skip(4).FirstOrDefault()?.roundScoreInPoints ?? 0,
+                        pinUrl = pg.pinUrl,
+                        r1 = RoundData(pg, 0),
+                        r2 = RoundData(pg, 1),
+                        r3 = RoundData(pg, 2),
+                        r4 = RoundData(pg, 3),
+                        r5 = RoundData(pg, 4),
                         eliminatedInGame = EliminatedInGameDescription(t.Games, x, pg.userId)
                     }).ToList(),
                     answers = x.RoundLocations.Select(r => new AnswerInGame { lat = r.lat, lng = r.lng, countryCode = r.countryCode, countryName = r.countryName }).ToArray(),
@@ -75,6 +76,13 @@ namespace GeoTourney
             return result;
         }
 
+        static RoundData RoundData(GeoTournament.PlayerGame pg, int index) =>
+            new()
+            {
+                points = pg.game.player.guesses.Skip(index).FirstOrDefault()?.roundScoreInPoints ?? 0,
+                time = pg.game.player.guesses.Skip(index).FirstOrDefault()?.time
+            };
+
         static string GameDescription(GeoTournament.Game game)
         {
             var restrictions = (game.forbidMoving, game.forbidZooming, game.forbidRotating) switch
@@ -110,14 +118,21 @@ namespace GeoTourney
         public string player { get; set; } = string.Empty;
         public string playerId { get; set; } = string.Empty;
         public int points { get; set; }
-        public int r1 { get; set; }
-        public int r2 { get; set; }
-        public int r3 { get; set; }
-        public int r4 { get; set; }
-        public int r5 { get; set; }
+        public RoundData r1 { get; set; } = new();
+        public RoundData r2 { get; set; } = new();
+        public RoundData r3 { get; set; } = new();
+        public RoundData r4 { get; set; } = new();
+        public RoundData r5 { get; set; } = new();
         public string? eliminatedInGame { get; set; }
         public decimal totalDistanceInMeters { get; set; }
         public decimal totalTime { get; set; }
+        public string pinUrl { get; set; } = string.Empty;
+    }
+
+    public record RoundData
+    {
+        public int points { get; set; }
+        public decimal? time { get; set; }
     }
 
     public record GameData

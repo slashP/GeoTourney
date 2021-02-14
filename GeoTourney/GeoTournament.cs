@@ -453,6 +453,7 @@ namespace GeoTourney
             public string playerName { get; set; } = string.Empty;
             public string userId { get; set; } = string.Empty;
             public int totalScore { get; set; }
+            public string pinUrl { get; set; } = string.Empty;
             public Game game { get; set; } = new();
         }
 

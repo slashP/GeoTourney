@@ -70,7 +70,8 @@
         tournament = data.tournament;
         const content = document.getElementById("content");
         const tournamentHtml = includeTotal ? createTournamentTable(tournament) : '';
-        content.innerHTML = tournamentHtml + games.map(createGame).join('');
+        const toggleTotalScoreHtml = !includeTotal && games.length > 1 ? createToggleTournamentTotalScore() : '';
+        content.innerHTML = tournamentHtml + games.map(createGame).join('') + toggleTotalScoreHtml;
     }
     init();
     const average = list => Math.trunc(list.filter(x => x !== null).reduce((a, v, i) => (a * i + v) / (i + 1)));
@@ -93,15 +94,24 @@
     let allMaps = [];
     let lastRoundIndexSelected = [];
     const createActualLocationLink = (answer, defaultText) => {
-        const linkText = answer.countryCode ? `<span title="${answer.countryName}" class="flag-icon flag-icon-${answer.countryCode.toLowerCase()}"></span>` : defaultText;
-        return linkText && `<a href='https://maps.google.com/maps?q=&layer=c&cbll=${answer.lat},${answer.lng}' target="_blank" rel="noreferrer noopener">${linkText}</a>`;
+        const linkText = answer.countryCode ? `<span title="${answer.countryName}" class="flag-icon flag-icon-${answer.countryCode.toLowerCase()} my-1"></span>` : defaultText;
+        return linkText && `<br><a href='https://maps.google.com/maps?q=&layer=c&cbll=${answer.lat},${answer.lng}' target="_blank" rel="noreferrer noopener">${linkText}</a>`;
     }
 
     const createFlagLocationLink = answer => {
         const linkHtml = createActualLocationLink(answer);
-        return linkHtml ? `<span style="margin-left: 7px;">${linkHtml}</span>` : '';    }
+        return linkHtml || '';
+    }
 
     const viewRound = (gameNumber, roundIndex = 0) => {
+        if (lastRoundIndexSelected[gameNumber] === roundIndex) {
+            document.getElementById(`table-round-game-${gameNumber}`).style.display = "none";
+            document.getElementById(`mapid-game-${gameNumber}-round-${roundIndex}`).style.display = "none";
+            lastRoundIndexSelected[gameNumber] = null;
+            renderGameTables();
+            return;
+        }
+
         lastRoundIndexSelected[gameNumber] = roundIndex;
         var game = games.filter(x => x.gameNumber === gameNumber)[0];
         let allGuesses = game.allGuesses[roundIndex];
@@ -229,7 +239,7 @@ ${players.map(createRoundRow).join('')}
         var gameNumber = gameIndex + 1;
         var game = games.filter(x => x.gameNumber === gameNumber)[0];
         var p = game.playerGames.filter(x => x.playerId === playerInTournament.playerId)[0];
-        return p ? [p.r1, p.r2, p.r3, p.r4, p.r5] : [];
+        return p ? [p.r1.points, p.r2.points, p.r3.points, p.r4.points, p.r5.points] : [];
     };
 
     const totalPointsExtraInfo = (playerInTournament, games) => {
@@ -252,32 +262,43 @@ Round std.dev: ${standardDeviation(roundPoints)}`;
 
     const highLightClass = playerGame => filteredPlayerIds.includes(playerGame.playerId) ? "bg-light text-dark" : "";
 
+    const playerPinImage = pinUrl => pinUrl ? `<img style="height: 24px" class="rounded" src="https://www.geoguessr.com/images/auto/48/48/ce/0/plain/${pinUrl}"  />` : '';
+
+    const timeText = time => `<br><span class="text-muted" style="font-size: 10px">${time} sec.</span>`;
+
     const createGameRow = (game, playerGame, index) => `
-<tr class="${highLightClass(playerGame)}" onclick="togglePlayer(${game.gameNumber}, '${playerGame.playerId}')">
-            <td class="text-right">${index + 1}</td>
-            <td class="${eliminationClass(game, playerGame)}" title="${eliminationDescription(game, playerGame)}">${playerGame.player}</td>
-${game.playedWithEliminations ? `<td class="text-right">${playerGame.eliminatedInGame || ''}</td>` : ''}
-            <td class="text-right">${numberFormat.format(playerGame.points)}</td>
-            <td class="text-right">${numberFormat.format(playerGame.r1)}</td>
-            <td class="text-right">${numberFormat.format(playerGame.r2)}</td>
-            <td class="text-right">${numberFormat.format(playerGame.r3)}</td>
-            <td class="text-right">${numberFormat.format(playerGame.r4)}</td>
-            <td class="text-right">${numberFormat.format(playerGame.r5)}</td>
+<tr class="${highLightClass(playerGame)} align-middle" onclick="togglePlayer(${game.gameNumber}, '${playerGame.playerId}')">
+            <td class="text-right align-middle">${index + 1}</td>
+            <td class="text-center align-middle">${playerPinImage(playerGame.pinUrl)}</td>
+            <td class="${eliminationClass(game, playerGame)} align-middle" title="${eliminationDescription(game, playerGame)}">${playerGame.player}</td>
+${game.playedWithEliminations ? `<td class="text-right align-middle">${playerGame.eliminatedInGame || ''}</td>` : ''}
+            <td class="text-right">${numberFormat.format(playerGame.points)}${timeText(playerGame.totalTime)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r1.points)}${timeText(playerGame.r1.time)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r2.points)}${timeText(playerGame.r2.time)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r3.points)}${timeText(playerGame.r3.time)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r4.points)}${timeText(playerGame.r4.time)}</td>
+            <td class="text-right">${numberFormat.format(playerGame.r5.points)}${timeText(playerGame.r5.time)}</td>
 </tr>
 `;
 
+    const roundSelectedClass = (gameNumber, roundIndex) => {
+        const roundSeleted = lastRoundIndexSelected[gameNumber];
+        return roundSeleted === roundIndex ? "bg-light" : "";
+    };
+
     const createGameTable = game => `
-<table class="table table-dark table-sm">
+<table class="table table-dark table-sm" style="line-height: 12px;">
             <tr>
-                <th class="text-right">#</th>
-                <th>Player</th>
-                ${game.playedWithEliminations ? '<th class="text-right">Eliminated in game</th>' : ''}
-                <th class="text-right">Points</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 0)"><button class="btn btn-sm btn-outline-primary">R1</button>${createFlagLocationLink(game.answers[0])}</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 1)"><button class="btn btn-sm btn-outline-primary">R2</button>${createFlagLocationLink(game.answers[1])}</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 2)"><button class="btn btn-sm btn-outline-primary">R3</button>${createFlagLocationLink(game.answers[2])}</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 3)"><button class="btn btn-sm btn-outline-primary">R4</button>${createFlagLocationLink(game.answers[3])}</th>
-                <th class="text-right cursor-pointer" onclick="viewRound(${game.gameNumber}, 4)"><button class="btn btn-sm btn-outline-primary">R5</button>${createFlagLocationLink(game.answers[4])}</th>
+                <th class="text-right align-middle">#</th>
+                <th class="align-middle"></th>
+                <th class="align-middle">Player</th>
+                ${game.playedWithEliminations ? '<th class="text-right align-middle">Eliminated</th>' : ''}
+                <th class="text-right align-middle">Points</th>
+                <th class="text-center cursor-pointer align-middle ${roundSelectedClass(game.gameNumber, 0)}" onclick="viewRound(${game.gameNumber}, 0)"><button class="btn btn-sm btn-outline-primary">R1</button>${createFlagLocationLink(game.answers[0])}</th>
+                <th class="text-center cursor-pointer align-middle ${roundSelectedClass(game.gameNumber, 1)}" onclick="viewRound(${game.gameNumber}, 1)"><button class="btn btn-sm btn-outline-primary">R2</button>${createFlagLocationLink(game.answers[1])}</th>
+                <th class="text-center cursor-pointer align-middle ${roundSelectedClass(game.gameNumber, 2)}" onclick="viewRound(${game.gameNumber}, 2)"><button class="btn btn-sm btn-outline-primary">R3</button>${createFlagLocationLink(game.answers[2])}</th>
+                <th class="text-center cursor-pointer align-middle ${roundSelectedClass(game.gameNumber, 3)}" onclick="viewRound(${game.gameNumber}, 3)"><button class="btn btn-sm btn-outline-primary">R4</button>${createFlagLocationLink(game.answers[3])}</th>
+                <th class="text-center cursor-pointer align-middle ${roundSelectedClass(game.gameNumber, 4)}" onclick="viewRound(${game.gameNumber}, 4)"><button class="btn btn-sm btn-outline-primary">R5</button>${createFlagLocationLink(game.answers[4])}</th>
             </tr>
 ${game.playerGames.map((pg, i) => createGameRow(game, pg, i)).join('')}
 </table>
@@ -324,6 +345,15 @@ ${tournament.players.map(createTournamentTableRow).join('')}
         </table>
 </div>
 `;
+
+    const createToggleTournamentTotalScore = () => `
+<div class="row">
+    <div class="alert alert-dark col-3 mx-3 text-center" role="alert">
+      <a class="alert-link" href="${new URL(window.location).href + "&total=true"}">View with total scores</a>
+    </div>
+</div>
+`;
+
 
     function createGlobalNumberIcon() {
         L.NumberedDivIcon = L.Icon.extend({

@@ -33,6 +33,7 @@ namespace GeoTourney
                         playerName = x.player,
                         userId = x.playerId,
                         totalScore = x.points,
+                        pinUrl = x.pinUrl,
                         game = new GeoTournament.Game
                         {
                             player = new GeoTournament.Player
