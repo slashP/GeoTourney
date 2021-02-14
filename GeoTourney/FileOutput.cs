@@ -33,5 +33,7 @@ namespace GeoTourney
         }
 
         public Task KeepAlive() => Task.CompletedTask;
+
+        public bool SupportsPrivateMessages => true;
     }
 }

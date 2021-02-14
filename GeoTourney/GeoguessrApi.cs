@@ -22,6 +22,8 @@ namespace GeoTourney
 
         public static async Task<(string? error, IReadOnlyCollection<GeoTournament.PlayerGame> playerGames)> LoadGame(string gameId, Page page, IConfiguration config)
         {
+            var bannedUsersIds = await AppDataProvider.BannedUsersIds();
+
             try
             {
                 var error = await VerifySignedIn(page, config);
@@ -59,8 +61,9 @@ namespace GeoTourney
 
                 } while (games.Count == maxItems && !limitPerHour.IsFull());
 
-                CachedGames.Add(gameId, playerGames);
-                return (null, playerGames);
+                var filteredGames = playerGames.Where(x => !bannedUsersIds.Contains(x.userId)).ToList();
+                CachedGames.Add(gameId, filteredGames);
+                return (null, filteredGames);
             }
             catch (Exception e)
             {

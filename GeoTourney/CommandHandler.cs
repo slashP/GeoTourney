@@ -18,6 +18,8 @@ namespace GeoTourney
         static readonly Regex ResultsUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/results\/([a-zA-Z0-9_.-]*)[\/]?$");
         static readonly Regex ChallengeUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/challenge\/([a-zA-Z0-9_.-]*)[\/]?$");
         static readonly Regex LoadTournamentFromUrlRegex = new(@"^loadtournamentfrom https:\/\/([\a-z]*).github.io\/");
+        static readonly Regex BanByUrlRegex = new(@"^ban https:\/\/www.geoguessr.com\/user\/([a-zA-Z0-9_.-]*)[\/]?$");
+        static readonly Regex UnbanByUrlRegex = new(@"^unban https:\/\/www.geoguessr.com\/user\/([a-zA-Z0-9_.-]*)[\/]?$");
 
         static readonly IGameEventOutput[] GameEventOutputs =
         {
@@ -85,11 +87,6 @@ namespace GeoTourney
                 {
                     var url = await tournament.PrintGameScore(config);
                     await WriteOutput($"Last game results: {url}");
-                }
-                else if (inputCommand == "totalscore")
-                {
-                    var url = await tournament.PrintTotalScore(config);
-                    await WriteOutput($"Tournament results: {url}");
                 }
                 else if (inputCommand == "endgame")
                 {
@@ -212,6 +209,25 @@ namespace GeoTourney
                     var url = await GoogleSheet.Create(tournament, filenameSourceForCommand);
                     await Clip.SetText(url, "URL to Google sheet copied to clipboard");
                 }
+                else if (BanByUrlRegex.IsMatch(inputCommand))
+                {
+                    var userId = BanByUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
+                    await AppDataProvider.BanUser(userId);
+                    await WritePrivateOutput("User banned");
+                    var bannedUsersIds = await AppDataProvider.BannedUsersIds();
+                    tournament.UpdateBans(bannedUsersIds);
+                }
+                else if (UnbanByUrlRegex.IsMatch(inputCommand))
+                {
+                    var userId = UnbanByUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
+                    await AppDataProvider.UnbanUser(userId);
+                    await WritePrivateOutput("User unbanned");
+                }
+                else if (inputCommand == "bans")
+                {
+                    var bannedUserUrls = (await AppDataProvider.BannedUsersIds()).Select(x => $"https://www.geoguessr.com/user/{x}").ToList();
+                    await WritePrivateOutput($"{bannedUserUrls.Count} {"user".Pluralize(bannedUserUrls.Count)} banned{Environment.NewLine}{string.Join(Environment.NewLine, bannedUserUrls)}");
+                }
             }
             catch (Exception e)
             {
@@ -245,6 +261,14 @@ namespace GeoTourney
         static async Task WriteOutput(string message)
         {
             foreach (var output in activeOutputs)
+            {
+                await output.Write(message);
+            }
+        }
+
+        static async Task WritePrivateOutput(string message)
+        {
+            foreach (var output in activeOutputs.Where(x => x.SupportsPrivateMessages))
             {
                 await output.Write(message);
             }

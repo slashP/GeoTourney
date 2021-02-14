@@ -58,6 +58,8 @@ namespace GeoTourney
             return Task.CompletedTask;
         }
 
+        public bool SupportsPrivateMessages => false;
+
         InitializationStatus Initialize()
         {
             try

@@ -29,7 +29,7 @@ namespace GeoTourney
 
         public static string AsString(this IEnumerable<char> characters) => new(characters.ToArray());
 
-        public static string Pluralize(this string text) => text?.Length == 1 ? text : $"{text}s";
+        public static string Pluralize(this string text, int count) => count == 1 ? text : $"{text}s";
 
         public static string HtmlEncode(this string text) => HttpUtility.HtmlEncode(text);
 

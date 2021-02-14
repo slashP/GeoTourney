@@ -27,7 +27,7 @@ namespace GeoTourney
                 : (true, string.Empty);
         }
 
-        public static async Task<string> UploadTournamentData(IConfiguration configuration, GithubTournamentData data, bool includeTotalScore)
+        public static async Task<string> UploadTournamentData(IConfiguration configuration, GithubTournamentData data)
         {
             var client = GitHubClient(configuration);
             if (client == null)
@@ -47,7 +47,7 @@ namespace GeoTourney
             await DeleteFilesInFolder(client, repo, $"geoguessr/{today}", file => !string.IsNullOrEmpty(data.nickname) && file.Name.StartsWith(data.nickname));
             var fileContent = JsonSerializer.Serialize(data);
             await CreateOrUpdateFile(client, repo, fileContent, path, "Geoguessr tournament.");
-            return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}{TotalScoreQueryString(includeTotalScore)}";
+            return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}";
         }
 
         static string TournamentTemplateGithubPath()
@@ -244,8 +244,6 @@ namespace GeoTourney
 
         static string BranchQueryString(Repository repo) =>
             repo.DefaultBranch != "main" ? $"&branch={repo.DefaultBranch}" : string.Empty;
-
-        static string TotalScoreQueryString(bool includeTotalScore) => includeTotalScore ? "&total=true" : string.Empty;
 
         static string Today() => $"{DateTime.Now:yyyy-MM-dd}";
 

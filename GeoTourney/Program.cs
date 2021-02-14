@@ -28,7 +28,7 @@ await Github.CreateOrUpdateTemplates(config);
 var localExampleTournamentPath = config["LocalExampleTournamentPath"];
 if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampleTournamentPath))
 {
-    var url = await Github.UploadTournamentData(config, JsonSerializer.Deserialize<GithubTournamentData>(await File.ReadAllTextAsync(localExampleTournamentPath))!, false);
+    var url = await Github.UploadTournamentData(config, JsonSerializer.Deserialize<GithubTournamentData>(await File.ReadAllTextAsync(localExampleTournamentPath))!);
     await Clip.SetText(url, "Copied to clipboard");
 }
 

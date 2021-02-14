@@ -10,5 +10,6 @@ namespace GeoTourney
 
         Task Write(string message);
         Task KeepAlive();
+        bool SupportsPrivateMessages { get; }
     }
 }

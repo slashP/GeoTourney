@@ -220,6 +220,16 @@ namespace GeoTourney
             return await MassActionOnMatchingPlayers(pointsDescription, threshold, config, StatusesWhereYouCanGetRevived, EliminationStatus.Revived, "revived");
         }
 
+        public void UpdateBans(IReadOnlyCollection<string> bannedUserIds)
+        {
+            foreach (var gameObject in Games)
+            {
+                gameObject.PlayerGames = gameObject.PlayerGames.Where(x => !bannedUserIds.Contains(x.userId)).ToList();
+                gameObject.EliminationStatuses = gameObject.EliminationStatuses
+                    .Where(x => !bannedUserIds.Contains(x.Key)).ToDictionary(x => x.Key, x => x.Value);
+            }
+        }
+
         async Task<string?> MassActionOnMatchingPlayers(
             PointsDescription pointsDescription,
             int threshold,
@@ -249,7 +259,7 @@ namespace GeoTourney
             }
 
             var url = await GenerateUrlToLatestTournamentInfo(config);
-            return $"{matchingPlayers.Count} {"player".Pluralize()} {actionVerb}. {url}";
+            return $"{matchingPlayers.Count} {"player".Pluralize(matchingPlayers.Count)} {actionVerb}. {url}";
         }
 
         static Func<PlayerGame, bool> PointsDescriptionSelector(PointsDescription pointsDescription, int threshold) =>
@@ -340,7 +350,7 @@ namespace GeoTourney
         async Task<string> GenerateUrlToLatestTournamentInfo(IConfiguration configuration)
         {
             var data = TournamentDataCreator.GenerateTournamentData(this);
-            var url = await Github.UploadTournamentData(configuration, data, false);
+            var url = await Github.UploadTournamentData(configuration, data);
             CurrentGithubResultsPageUrl = url;
             return url;
         }
@@ -404,15 +414,6 @@ namespace GeoTourney
         public string? CurrentGameUrl() => CurrentGameId != null
             ? GeoguessrApi.ChallengeLink(CurrentGameId)
             : null;
-
-        public async Task<string> PrintTotalScore(IConfiguration config)
-        {
-            var data = TournamentDataCreator.GenerateTournamentData(this);
-            var url = await Github.UploadTournamentData(config, data, true);
-
-            Console.WriteLine(url);
-            return url;
-        }
 
         public static EliminationStatus GetEliminationStatus(IReadOnlyCollection<GameObject> games, string userId)
         {

@@ -47,6 +47,8 @@ namespace GeoTourney
             }
         }
 
+        public bool SupportsPrivateMessages => true;
+
         async Task<InitializationStatus> Initialize()
         {
             try
