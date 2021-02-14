@@ -31,7 +31,7 @@
 
         .leaflet-marker-icon .number {
             position: relative;
-            top: -21px;
+            top: -24px;
             font-size: 8px;
             width: 25px;
             text-align: center;
@@ -52,8 +52,14 @@
 <div class="container-fluid" id="content"></div>
 <script>
     createGlobalNumberIcon();
-    const createIcon = (number) => new L.NumberedDivIcon({ number: number, iconUrl: "https://i.imgur.com/AuqPKXs.png" });
-    const icons = [...Array(200)].map((_, i) => i + 1).map(createIcon);
+    const fullPinUrl = pinUrl => pinUrl ? `https://www.geoguessr.com/images/auto/48/48/ce/0/plain/${pinUrl}` : "https://www.geoguessr.com/_next/static/images/light-blue-8b77f771c6a2b06ebffedc913cc40f32.svg";
+    const createIcon = player => new L.HtmlDivIcon({
+        innerHtml: `<img class="rounded-circle" src="${fullPinUrl(player.pinUrl)}" style="height: 16px;">`,
+        iconUrl: "https://i.imgur.com/AuqPKXs.png",
+        playerId: player.playerId
+    });
+    const distinctBy = (array, prop) => array.filter((obj, pos, arr) => arr.map(mapObj => mapObj[prop]).indexOf(obj[prop]) === pos);
+    let icons = [];
     let games = [];
     let tournament = null;
     let filteredPlayerIds = [];
@@ -68,6 +74,7 @@
         const data = await response.json();
         games = data.games;
         tournament = data.tournament;
+        icons = distinctBy(games.flatMap(x => x.playerGames.map(y => ({ pinUrl: y.pinUrl, playerId: y.playerId }))), "playerId").map(createIcon);
         const content = document.getElementById("content");
         const tournamentHtml = includeTotal ? createTournamentTable(tournament) : '';
         const toggleTotalScoreHtml = !includeTotal && games.length > 1 ? createToggleTournamentTotalScore() : '';
@@ -103,8 +110,8 @@
         return linkHtml || '';
     }
 
-    const viewRound = (gameNumber, roundIndex = 0) => {
-        if (lastRoundIndexSelected[gameNumber] === roundIndex) {
+    const viewRound = (gameNumber, roundIndex, filterPlayers = false) => {
+        if (lastRoundIndexSelected[gameNumber] === roundIndex && !filterPlayers) {
             document.getElementById(`table-round-game-${gameNumber}`).style.display = "none";
             document.getElementById(`mapid-game-${gameNumber}-round-${roundIndex}`).style.display = "none";
             lastRoundIndexSelected[gameNumber] = null;
@@ -145,7 +152,7 @@
                 let marker = L.marker([guess.lat, guess.lng],
                     {
                         zIndexOffset: allGuesses.length - index,
-                        icon: icons.slice(index)[0] || [...icons].pop(),
+                        icon: icons.filter(i => i.options.playerId === guess.playerId)[0],
                     });
                 marker.on('mouseover', function (e) {
                     this.openPopup();
@@ -159,7 +166,7 @@
             var answerMarker = L.marker([answer.lat, answer.lng],
                 {
                     zIndexOffset: allGuesses.length + 100,
-                    icon: new L.NumberedDivIcon({ number: null, iconUrl: "https://i.imgur.com/uS6hKqq.png" }),
+                    icon: new L.HtmlDivIcon({ innerHtml: null, iconUrl: "https://i.imgur.com/uS6hKqq.png" }),
                 });
             answerMarker
                 .bindPopup(createActualLocationLink(answer, 'Actual location'))
@@ -168,8 +175,8 @@
         }
 
         if (filteredPlayerIds.length === 0) {
-            existingMap.markers.forEach((x, index) => {
-                x.marker.setIcon(icons.slice(index)[0] || [...icons].pop());
+            existingMap.markers.forEach(x => {
+                x.marker.setIcon(icons.filter(i => i.options.playerId === x.playerId)[0]);
                 existingMap.map.addLayer(x.marker);
             });
             existingMap.map.fitBounds(new L.featureGroup(existingMap.markers.map(x => x.marker).concat([existingMap.answerMarker])).getBounds());
@@ -177,7 +184,7 @@
             existingMap.markers.forEach(x => existingMap.map.removeLayer(x.marker));
             var filteredMarkers = existingMap.markers.filter(x => filteredPlayerIds.includes(x.playerId));
             filteredMarkers.forEach(x => {
-                x.marker.setIcon(createIcon(x.playerName[0]));
+                x.marker.setIcon(icons.filter(i => i.options.playerId === x.playerId)[0]);
                 existingMap.map.addLayer(x.marker);
             });
             existingMap.map.fitBounds(new L.featureGroup(filteredMarkers.map(x => x.marker).concat([existingMap.answerMarker])).getBounds());
@@ -192,7 +199,7 @@
             filteredPlayerIds.push(playerId);
         }
 
-        viewRound(gameNumber, lastRoundIndexSelected[gameNumber]);
+        viewRound(gameNumber, lastRoundIndexSelected[gameNumber] || 0, true);
     }
 
     const createRoundRow = (player, index) => `
@@ -262,7 +269,7 @@ Round std.dev: ${standardDeviation(roundPoints)}`;
 
     const highLightClass = playerGame => filteredPlayerIds.includes(playerGame.playerId) ? "bg-light text-dark" : "";
 
-    const playerPinImage = pinUrl => pinUrl ? `<img style="height: 24px" class="rounded" src="https://www.geoguessr.com/images/auto/48/48/ce/0/plain/${pinUrl}"  />` : '';
+    const playerPinImage = pinUrl => `<img style="height: 24px" class="rounded" src="${fullPinUrl(pinUrl)}" />`;
 
     const timeText = time => `<br><span class="text-muted" style="font-size: 10px">${time} sec.</span>`;
 
@@ -356,15 +363,16 @@ ${tournament.players.map(createTournamentTableRow).join('')}
 
 
     function createGlobalNumberIcon() {
-        L.NumberedDivIcon = L.Icon.extend({
+        L.HtmlDivIcon = L.Icon.extend({
             options: {
                 iconUrl: '',
-                number: '',
+                innerHtml: '',
                 shadowUrl: null,
                 iconSize: new L.Point(21, 25),
                 iconAnchor: new L.Point(12, 25),
                 popupAnchor: new L.Point(0, -25),
-                className: 'leaflet-div-icon'
+                className: 'leaflet-div-icon',
+                playerId: ''
             },
 
             createIcon: function () {
@@ -373,7 +381,7 @@ ${tournament.players.map(createTournamentTableRow).join('')}
                 img.style = "height: 25px;";
                 var numdiv = document.createElement('div');
                 numdiv.setAttribute("class", "number");
-                numdiv.innerHTML = this.options['number'] || '';
+                numdiv.innerHTML = this.options['innerHtml'] || '';
                 div.appendChild(img);
                 div.appendChild(numdiv);
                 this._setIconStyles(div, 'icon');
