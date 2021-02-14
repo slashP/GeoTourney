@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -17,7 +18,9 @@ namespace GeoTourney
         EventHandler<string>? _onMessageReceived;
         string? _twitchOAuth;
 
-        public InitializationStatus Initialize(IConfiguration configuration, EventHandler<string> onMessageReceived)
+        public Task<InitializationStatus> Initialize(
+            IConfiguration configuration,
+            EventHandler<string> onMessageReceived)
         {
             _onMessageReceived = onMessageReceived;
             _twitchChannel = configuration[TwitchChannelConfigKey];
@@ -25,13 +28,13 @@ namespace GeoTourney
             _twitchOAuth = configuration["TwitchToken"];
             if (string.IsNullOrEmpty(_twitchChannel) || string.IsNullOrEmpty(_twitchBotUsername) || string.IsNullOrEmpty(_twitchOAuth))
             {
-                return InitializationStatus.Disabled;
+                return Task.FromResult(InitializationStatus.Disabled);
             }
 
-            return Initialize();
+            return Task.FromResult(Initialize());
         }
 
-        public void Write(string message)
+        public Task Write(string message)
         {
             try
             {
@@ -41,14 +44,18 @@ namespace GeoTourney
             {
                 Console.WriteLine(e);
             }
+
+            return Task.CompletedTask;
         }
 
-        public void KeepAlive()
+        public Task KeepAlive()
         {
             if (_client == null || !_client.IsConnected || !_client.JoinedChannels.Any())
             {
                 Initialize();
             }
+
+            return Task.CompletedTask;
         }
 
         InitializationStatus Initialize()

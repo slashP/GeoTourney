@@ -1,22 +1,24 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
 namespace GeoTourney
 {
     public class ConsoleOutput : IGameEventOutput
     {
-        public InitializationStatus Initialize(IConfiguration configuration, EventHandler<string> onMessageReceived)
+        public Task<InitializationStatus> Initialize(
+            IConfiguration configuration,
+            EventHandler<string> onMessageReceived)
         {
-            return InitializationStatus.Ok;
+            return Task.FromResult(InitializationStatus.Ok);
         }
 
-        public void Write(string message)
+        public Task Write(string message)
         {
             Console.WriteLine(message);
+            return Task.CompletedTask;
         }
 
-        public void KeepAlive()
-        {
-        }
+        public Task KeepAlive() => Task.CompletedTask;
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
 namespace GeoTourney
@@ -8,13 +9,16 @@ namespace GeoTourney
     {
         string _folder = string.Empty;
 
-        public InitializationStatus Initialize(IConfiguration configuration, EventHandler<string> onMessageReceived)
+        public Task<InitializationStatus> Initialize(
+            IConfiguration configuration,
+            EventHandler<string> onMessageReceived)
         {
             _folder = configuration["LogFolder"];
-            return string.IsNullOrEmpty(_folder) || !Directory.Exists(_folder) ? InitializationStatus.Disabled : InitializationStatus.Ok;
+            var initializationStatus = string.IsNullOrEmpty(_folder) || !Directory.Exists(_folder) ? InitializationStatus.Disabled : InitializationStatus.Ok;
+            return Task.FromResult(initializationStatus);
         }
 
-        public void Write(string message)
+        public Task Write(string message)
         {
             try
             {
@@ -24,10 +28,10 @@ namespace GeoTourney
             {
                 Console.WriteLine(e);
             }
+
+            return Task.CompletedTask;
         }
 
-        public void KeepAlive()
-        {
-        }
+        public Task KeepAlive() => Task.CompletedTask;
     }
 }

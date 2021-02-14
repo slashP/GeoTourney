@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -24,7 +23,8 @@ namespace GeoTourney
         {
             new TwitchClient(),
             new ConsoleOutput(),
-            new FileOutput()
+            new FileOutput(),
+            new DiscordClient()
         };
 
         static List<IGameEventOutput> activeOutputs = new();
@@ -33,12 +33,14 @@ namespace GeoTourney
 
         public static async Task Initialize(IConfiguration config)
         {
-            var allOutputs = GameEventOutputs.Select(x => new
+            foreach (var gameEventOutput in GameEventOutputs)
             {
-                Status = x.Initialize(config, OnMessageReceived),
-                Output = x
-            }).ToList();
-            activeOutputs = allOutputs.Where(x => x.Status == InitializationStatus.Ok).Select(x => x.Output).ToList();
+                var status = await gameEventOutput.Initialize(config, OnMessageReceived);
+                if (status == InitializationStatus.Ok)
+                {
+                    activeOutputs.Add(gameEventOutput);
+                }
+            }
             tournament = new(await NameGenerator.New(config), DateTime.UtcNow);
         }
 
@@ -50,7 +52,7 @@ namespace GeoTourney
                 inputCommand = command;
                 if (inputCommand == null)
                 {
-                    foreach (var output in activeOutputs) output.KeepAlive();
+                    foreach (var output in activeOutputs) await output.KeepAlive();
                 }
                 else if (ChallengeUrlRegex.IsMatch(inputCommand))
                 {
@@ -58,12 +60,12 @@ namespace GeoTourney
                     if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt && !tournament.IsCurrentGameSameAs(gameId))
                     {
                         var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !{inputCommand} to ignore.";
-                        WriteOutput(message);
+                        await WriteOutput(message);
                         return;
                     }
 
                     var messageToChat = await tournament.SetCurrentGame(gameId, page, config, null);
-                    if (messageToChat != null) WriteOutput(messageToChat);
+                    if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (ResultsUrlRegex.IsMatch(inputCommand))
                 {
@@ -71,38 +73,38 @@ namespace GeoTourney
                     if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt && !tournament.IsCurrentGameSameAs(gameId))
                     {
                         var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !{inputCommand} to ignore.";
-                        WriteOutput(message);
+                        await WriteOutput(message);
                         return;
                     }
 
                     await tournament.SetCurrentGame(gameId, page, config, null);
                     var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
-                    if (messageToChat != null) WriteOutput(messageToChat);
+                    if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (inputCommand == "gamescore")
                 {
                     var url = await tournament.PrintGameScore(config);
-                    WriteOutput($"Last game results: {url}");
+                    await WriteOutput($"Last game results: {url}");
                 }
                 else if (inputCommand == "totalscore")
                 {
                     var url = await tournament.PrintTotalScore(config);
-                    WriteOutput($"Tournament results: {url}");
+                    await WriteOutput($"Tournament results: {url}");
                 }
                 else if (inputCommand == "endgame")
                 {
                     var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
                     if (messageToChat != null)
                     {
-                        WriteOutput(messageToChat);
+                        await WriteOutput(messageToChat);
                     }
                 }
                 else if (inputCommand == "elim")
                 {
                     var message = await tournament.ToggleEliminations(page, config);
-                    WriteOutput($"Eliminations are now {tournament.PlayWithEliminations.ToOnOrOffString()}.");
+                    await WriteOutput($"Eliminations are now {tournament.PlayWithEliminations.ToOnOrOffString()}.");
                     await Task.Delay(TimeSpan.FromSeconds(2));
-                    if (message != null) WriteOutput(message);
+                    if (message != null) await WriteOutput(message);
                 }
                 else if (inputCommand == "restart")
                 {
@@ -111,7 +113,7 @@ namespace GeoTourney
                 else if (int.TryParse(inputCommand, out var number) && number >= 0)
                 {
                     var messageToChat = await tournament.EliminateAndFinish(page, config, number);
-                    if (messageToChat != null) WriteOutput(messageToChat);
+                    if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (LessOrMoreThanRegex.IsMatch(inputCommand))
                 {
@@ -121,33 +123,33 @@ namespace GeoTourney
                     var messageToChat = isEliminationAction
                         ? await tournament.EliminatePlayers(pointsDescription, points, config)
                         : await tournament.RevivePlayers(pointsDescription, points, config);
-                    if (messageToChat != null) WriteOutput(messageToChat);
+                    if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (inputCommand.StartsWith("elim "))
                 {
                     var playerSearchTerm = inputCommand.Skip("elim ".Length).AsString();
                     var messageToChat = await tournament.EliminateSpecificPlayer(playerSearchTerm, config);
-                    if (messageToChat != null) WriteOutput(messageToChat);
+                    if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (inputCommand.StartsWith("revive "))
                 {
                     var playerSearchTerm = inputCommand.Skip("revive ".Length).AsString();
                     var messageToChat = await tournament.ReviveSpecificPlayer(playerSearchTerm, config);
-                    if (messageToChat != null) WriteOutput(messageToChat);
+                    if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (LessOrMoreThanFinishGameRegex.IsMatch(inputCommand))
                 {
                     var points = Extensions.IntFromString(inputCommand);
                     var pointsDescription = inputCommand.Contains("less", StringComparison.InvariantCultureIgnoreCase) ? PointsDescription.LessThan : PointsDescription.MoreThan;
                     var messageToChat = await tournament.EliminateAndFinish(page, pointsDescription, points, config);
-                    if (messageToChat != null) WriteOutput(messageToChat);
+                    if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (inputCommand.StartsWith("game") || inputCommand.StartsWith("!game"))
                 {
                     if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt)
                     {
                         var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !!{inputCommand} to ignore.";
-                        WriteOutput(message);
+                        await WriteOutput(message);
                         return;
                     }
 
@@ -163,29 +165,29 @@ namespace GeoTourney
                     var (error, gameId, mapId) = await GeoguessrChallenge.Create(page, config, mapKey, timeDescription, gameModeDescription, mapIdsPlayed);
                     if (error != null)
                     {
-                        WriteOutput(error);
+                        await WriteOutput(error);
                     }
 
                     if (gameId != null)
                     {
                         var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId);
-                        if (messageToChat != null) WriteOutput(messageToChat);
+                        if (messageToChat != null) await WriteOutput(messageToChat);
                     }
                 }
                 else if (inputCommand == "maps")
                 {
                     var maps = await GeoguessrChallenge.GetMaps();
                     var messageToChat = await Github.UploadMaps(config, maps);
-                    if (messageToChat != null) WriteOutput(messageToChat);
+                    if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (inputCommand == "apiinfo")
                 {
-                    WriteOutput(GeoguessrApi.ApiCallsInfo());
+                    await WriteOutput(GeoguessrApi.ApiCallsInfo());
                 }
                 else if (inputCommand == "currentgame")
                 {
                     var messageToChat = tournament.CurrentGameUrl() ?? "No game running.";
-                    WriteOutput(messageToChat);
+                    await WriteOutput(messageToChat);
                 }
                 else if (LoadTournamentFromUrlRegex.IsMatch(inputCommand))
                 {
@@ -194,7 +196,7 @@ namespace GeoTourney
                     var id = Extensions.GetFromQueryString(new Uri(url).Query, "id");
                     if (id == null)
                     {
-                        WriteOutput($"Invalid URL. Missing ?id= | {url}");
+                        await WriteOutput($"Invalid URL. Missing ?id= | {url}");
                         return;
                     }
 
@@ -202,7 +204,7 @@ namespace GeoTourney
                     if (t != null)
                     {
                         tournament = t;
-                        WriteOutput($"Loaded tournament with {t.Games.Count} games.");
+                        await WriteOutput($"Loaded tournament with {t.Games.Count} games.");
                     }
                 }
                 else if (inputCommand.StartsWith("google-sheet"))
@@ -220,7 +222,7 @@ namespace GeoTourney
                     await File.AppendAllTextAsync("errors.txt", $"{DateTime.UtcNow:s}: {GeoTourney.Extensions.GetVersion()}{Environment.NewLine}{e}{Environment.NewLine}");
                     if (inputCommand != null)
                     {
-                        WriteOutput("Looks like you found a bug. That did not work as expected.");
+                        await WriteOutput("Looks like you found a bug. That did not work as expected.");
                     }
                 }
                 catch (Exception second)
@@ -240,9 +242,12 @@ namespace GeoTourney
             else if (int.TryParse(message, out var number) && number >= 0) ReadConsole.QueueCommand(number.ToString());
         }
 
-        static void WriteOutput(string message)
+        static async Task WriteOutput(string message)
         {
-            foreach (var output in activeOutputs) output.Write(message);
+            foreach (var output in activeOutputs)
+            {
+                await output.Write(message);
+            }
         }
     }
 }
