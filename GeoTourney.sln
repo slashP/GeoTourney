@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30709.132
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoTourney", "GeoTourney\GeoTourney.csproj", "{56BACAAC-62F5-4891-AAC4-42D37C2795FD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoTourney", "GeoTourney\GeoTourney.csproj", "{56BACAAC-62F5-4891-AAC4-42D37C2795FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoTourney.Console", "GeoTourney.Console\GeoTourney.Console.csproj", "{C55623A3-F3AA-4AE4-900B-4B1E290CF02B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoTourney.Windows", "GeoTourney.Windows\GeoTourney.Windows.csproj", "{F48BA909-6E1D-4605-96F7-CF7F059B6D2B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{56BACAAC-62F5-4891-AAC4-42D37C2795FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56BACAAC-62F5-4891-AAC4-42D37C2795FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{56BACAAC-62F5-4891-AAC4-42D37C2795FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C55623A3-F3AA-4AE4-900B-4B1E290CF02B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C55623A3-F3AA-4AE4-900B-4B1E290CF02B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C55623A3-F3AA-4AE4-900B-4B1E290CF02B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C55623A3-F3AA-4AE4-900B-4B1E290CF02B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F48BA909-6E1D-4605-96F7-CF7F059B6D2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F48BA909-6E1D-4605-96F7-CF7F059B6D2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F48BA909-6E1D-4605-96F7-CF7F059B6D2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F48BA909-6E1D-4605-96F7-CF7F059B6D2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

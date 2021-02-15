@@ -1,51 +1,19 @@
 ﻿using System;
 using System.IO;
-using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using GeoTourney;
 using Microsoft.Extensions.Configuration;
 using PuppeteerSharp;
 
-var name = typeof(GeoTournament).Assembly.GetName();
-Console.WriteLine($"Starting {name.Name} {GeoTourney.Extensions.GetVersion()}");
-var config = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json").Build();
-Console.OutputEncoding = Encoding.Unicode;
-Regex readCommandFromFileRegex = new(@"^read ([^<>:;,?""*|\/]+)$");
-await CommandHandler.Initialize(config);
-var gihubAccess = await Github.VerifyGithubTokenAccess(config);
-if (!gihubAccess.hasAccess)
-{
-    Console.WriteLine(gihubAccess.errorMessage);
-    Console.ReadKey();
-    return;
-}
-
-await Github.CreateOrUpdateTemplates(config);
-
-var localExampleTournamentPath = config["LocalExampleTournamentPath"];
-if (!string.IsNullOrEmpty(localExampleTournamentPath) && File.Exists(localExampleTournamentPath))
-{
-    var url = await Github.UploadTournamentData(config, JsonSerializer.Deserialize<GithubTournamentData>(await File.ReadAllTextAsync(localExampleTournamentPath))!);
-    await Clip.SetText(url, "Copied to clipboard");
-}
-
 await BrowserSetup.Initiate();
 var browser = await Puppeteer.LaunchAsync(BrowserSetup.LaunchOptions);
 var page = await browser.NewPageAsync();
-if (await GeoguessrApi.TrySignInFromLocalFile(page))
-{
-    await page.GoToAsync("https://www.geoguessr.com/me/profile");
-}
-else
-{
-    await page.GoToAsync("https://www.geoguessr.com/signin");
-}
+var config = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json").Build();
+Regex readCommandFromFileRegex = new(@"^read ([^<>:;,?""*|\/]+)$");
 
-GeoTournament.PrintCommands();
-Console.WriteLine();
+await Startup.InitiateAsync(config, page);
 
 while (true)
 {
