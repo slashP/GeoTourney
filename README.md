@@ -1,7 +1,9 @@
 ### First time setup
 To run the application you need `GeoTourney.exe` and valid settings. Run `GeoTourney.Config.exe` to generate or change settings.
 
-Download and unzip the `GeoTourney.exe` and `GeoTourney.Config.exe` to a folder of your choice. Then double click `GeoTourney.Config.exe` to run it. Now you fill in the values.
+Download and unzip the `GeoTourney.exe` and `GeoTourney.Config.exe` to a folder of your choice. Find the latest release [here](https://github.com/slashP/GeoTourney/releases). Then double click `GeoTourney.Config.exe` to run it. Now you fill in the values.
+
+![Create the Github access token](documentation/geotourney-config.png "Github access token")
 
 ##### Github Token
 
