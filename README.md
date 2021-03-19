@@ -1,44 +1,39 @@
 ### First time setup
-To run the application you need `GeoTourney.exe` and a valid `appsettings.json` file. The `appsettings.json` file is a text file that looks like this:
+To run the application you need `GeoTourney.exe` and valid settings. Run `GeoTourney.Config.exe` to generate or change settings.
 
-##### `appsettings.json`
-```
-{
-  "TwitchChannel": "TWITCH_CHANNEL",
-  "TwitchBotUsername": "TWITCH_BOT",
-  "TwitchToken": "TWITCH_TOKEN",
-  "GithubToken": "GITHUB_TOKEN"
-}
-```
+Download and unzip the `GeoTourney.exe` and `GeoTourney.Config.exe` to a folder of your choice. Then double click `GeoTourney.Config.exe` to run it. Now you fill in the values.
 
-Download and unzip the `GeoTourney.exe` and `appsettings.json` to a folder of your choice. Open that file in a text editor - now you will replace each of the upper case items with proper values.
-
-###### GITHUB_TOKEN
+##### Github Token
 
 1. Create a Github account. You can use an existing, but I can't recommend that. The program will put files into a `geoguessr` folder in the [Github Pages](https://pages.github.com/) repository.
 2. After registering, completing the hard reCAPTCHA and signing in, go to https://github.com/settings/tokens and click `Generate new token`.
 3. Check the scope `public_repo`.
 4. Put `Geoguessr Twitch tournament` or similar in the `Note` field so you know what it's for.
 5. Generate token.
-6. Copy the token value and put it into your `appsettings.json` file.
+6. Copy the token value and paste it into the text field.
 
 ![Create the Github access token](documentation/github_access_token.png "Github access token")
 
-###### TWITCH_CHANNEL
+##### Twitch Channel
 This is the streamer's channel/username on Twitch. Example `slashpeek`. The application listens to messages from this channel when it runs.
 
-###### TWITCH_BOT
-This is the Twitch account the application will send chat messages on behalf of. *Either* create a separate bot account or use your streamer account. Mark that the application is quite "conversational" so it most likely feels more natural to use a separate bot account so that it doesn't look like you're talking to yourself. Example: `slashpeekbot`.
+##### Twitch Bot Username
+This is the Twitch account the application will send chat messages on behalf of. *Either* create a separate bot account or use your streamer account. Mark that the application is quite "conversational" so it most will feel more natural to use a separate bot account so that it doesn't look like you're talking to yourself. Example: `slashpeekbot`.
 
-###### TWITCH_TOKEN
+##### Twitch Token
 
 1. Log into the Twitch account you decided to use for `TWITCH_BOT` above.
-2. Go to https://twitchapps.com/tokengen/
-3. Put `u3gs2ijo0y4uypz2vjbj4r49vapx0e` into the `Client ID` field.
-4. Put `chat:read chat:edit` into the Scopes field.
-5. Copy the token value and put it into your `appsettings.json` file.
+2. Copy the full `id.twitch.tv` URL from the app and paste it in a browser.
+3. Accept the access request.
+4. Copy the token value and paste it into the text field.
 
-![Create the Twitch access token](documentation/twitch_access_token.png "Twitch access token")
+##### Big Data Cloud API Key - optional
+If you want to see flags for the actual location of each round you can let `GeoTourney` integrate with Big Data Cloud.
+1. Go to https://www.bigdatacloud.com/ and register an account.
+2. Then copy API Key from https://www.bigdatacloud.com/customer/account under `My API Key`
+
+##### Discord token
+Skip unless you really know what you're doing.
 
 ### How to use
 1. Run `Geoguessr.exe` by double clicking (or from command line). The first time this will take time as it downloads ~300 MB.
@@ -120,12 +115,8 @@ After ending a game, a link to a webpage is generated. There you can see the res
 ![Results page](documentation/result-page.png "Results page")
 
   * Click on R1/R2/R3 etc. to get a map view of guesses from each player. The map zooms to fit all guesses.
-  * Click on each row to filter only to certain players. They will be "highlighted" in white and only those show up in the map. Guess markers on map change from showing round position to the first letter of the player's name.
+  * Click on each row to filter only to certain players. They will be "highlighted" in white and only those show up in the map.
   * The blue marker shows the actual location and contains the link to Google maps where you can see what the players saw in the round.
-
-![Total score page](documentation/total-score-page.png "Total score page")
-
-Total score page (`!totalscore`) shows aggregated numbers for the whole tournament. Hover over "total points" to get average game/round scores. Same goes for each game column. Standard deviation is also represented as a way to measure variance/stability.
 
 ### Motivation, explanation, FAQ, ramblings
 Basically I wanted to see an application that handled multi-game Geoguessr tournaments in a better way and let the users play on their computers. Secondly having a good presentation of results that was dynamic and available to everyone (not just on the streamer's machine) also after the games finish was a goal.

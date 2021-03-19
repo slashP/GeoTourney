@@ -1,44 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DebugType>embedded</DebugType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <VersionPrefix>2.2.0</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="credentials.json" Condition="Exists('credentials.json')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="defaultAppsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="maps.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="mapsTemplate.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="htmlTemplate.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
+    <ProjectReference Include="..\GeoTourney.Core\GeoTourney.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="ConsoleTables" Version="2.4.2" />
-    <PackageReference Include="Discord.Net" Version="2.3.0" />
-    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.49.0.2175" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.4" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.4" />
-    <PackageReference Include="Octokit" Version="0.48.0" />
-    <PackageReference Include="PuppeteerSharp" Version="2.0.4" />
-    <PackageReference Include="TextCopy" Version="4.2.0" />
-    <PackageReference Include="TwitchLib.Client" Version="3.1.6-CI-20201210-13" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 </Project>

@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+	<Nullable>enable</Nullable>
+	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	<DebugType>embedded</DebugType>
+	<SelfContained>true</SelfContained>
+	<PublishSingleFile>true</PublishSingleFile>
+	<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+	<VersionPrefix>2.2.0</VersionPrefix>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoTourney.Core\GeoTourney.Core.csproj" />
+  </ItemGroup>
+
+</Project>
