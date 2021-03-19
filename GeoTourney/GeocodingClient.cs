@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -43,8 +44,10 @@ namespace GeoTourney
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                var latitude = lat.ToString(CultureInfo.InvariantCulture);
+                var longitude = lng.ToString(CultureInfo.InvariantCulture);
                 return await Client.GetFromJsonAsync<BigDataCloudResponse>(
-                    $"data/reverse-geocode?latitude={lat}&longitude={lng}&localityLanguage=en&key={apiKey}", cancellationToken: cts.Token);
+                    $"data/reverse-geocode?latitude={latitude}&longitude={longitude}&localityLanguage=en&key={apiKey}", cancellationToken: cts.Token);
             }
             catch (Exception)
             {
