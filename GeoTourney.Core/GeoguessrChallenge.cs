@@ -142,12 +142,7 @@ namespace GeoTourney.Core
         {
             ushort? timeFromConfig = ushort.TryParse(config["DefaultChallengeTime"], out var n) ? n : null;
             var timeLimit = ushort.TryParse(timeDescription, out var time) ? time : timeFromConfig ?? DefaultTimeLimit;
-            return RoundToNearest(timeLimit);
-        }
-
-        static ushort RoundToNearest(in ushort timeLimit)
-        {
-            return (ushort) Math.Min((timeLimit / 10) * 10, 600);
+            return timeLimit;
         }
     }
 
