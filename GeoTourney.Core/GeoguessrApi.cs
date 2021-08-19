@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using PuppeteerSharp;
@@ -126,6 +127,31 @@ namespace GeoTourney.Core
             {
                 Console.WriteLine(e);
                 return ("Unexpected error.", null, null);
+            }
+        }
+
+        public static async Task GenerateMap(Page page, string folder)
+        {
+            var locations = JsonSerializer.Deserialize<List<GeoguessrMapLocation>>(await File.ReadAllTextAsync(Path.Combine(folder, "locations.json"))) ?? new();
+            var metadataPath = Path.Combine(folder, "metadata.json");
+            var geoguessrMap = (JsonSerializer.Deserialize<GeoguessrMap>(await File.ReadAllTextAsync(metadataPath)) ?? new()) with
+            {
+                customCoordinates = locations
+            };
+            var requestBody = JsonSerializer.Serialize(geoguessrMap);
+            var url = string.IsNullOrEmpty(geoguessrMap.id) ? "profiles/maps" : $"profiles/maps/{geoguessrMap.id}";
+            var result = await PostWithFetch<CreateMapResult>(page, requestBody, url);
+            if (result != null)
+            {
+                var metadata = geoguessrMap with
+                {
+                    id = result.id,
+                    customCoordinates = new()
+                };
+                await File.WriteAllTextAsync(metadataPath, JsonSerializer.Serialize(metadata, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                }));
             }
         }
 
@@ -274,6 +300,39 @@ namespace GeoTourney.Core
         record ChallengeApiResult
         {
             public string? token { get; set; }
+        }
+
+        record CreateMapResult
+        {
+            public string id { get; set; } = string.Empty;
+        }
+
+        record GeoguessrMap
+        {
+            public string? id { get; set; }
+            public bool highlighted { get; set; }
+            public string name { get; set; } = string.Empty;
+            public string description { get; set; } = string.Empty;
+            public Avatar avatar { get; set; } = new();
+            public bool published { get; set; }
+            public List<GeoguessrMapLocation> customCoordinates { get; set; } = new();
+        }
+
+        record Avatar
+        {
+            public string background { get; set; } = string.Empty;
+            public string landscape { get; set; } = string.Empty;
+            public string ground { get; set; } = string.Empty;
+            public string decoration { get; set; } = string.Empty;
+        }
+
+
+        record GeoguessrMapLocation
+        {
+            public float lat { get; set; }
+            public float lng { get; set; }
+            public float heading { get; set; }
+            public int pitch { get; set; }
         }
 
         public enum GameMode

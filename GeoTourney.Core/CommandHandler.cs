@@ -278,6 +278,11 @@ namespace GeoTourney.Core
                     await WritePrivateOutput(message);
                     return message;
                 }
+                else if (inputCommand.StartsWith("create-or-update-map"))
+                {
+                    await GeoguessrApi.GenerateMap(page, inputCommand.Split(' ').Last());
+                    return "Map update/creation done.";
+                }
             }
             catch (Exception e)
             {

@@ -15,7 +15,7 @@ namespace GeoTourney.Core
 
         public static async Task Initiate()
         {
-            await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision);
+            await new BrowserFetcher().DownloadAsync();
         }
     }
 }
