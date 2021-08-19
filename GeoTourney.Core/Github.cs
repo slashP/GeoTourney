@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -48,6 +49,34 @@ namespace GeoTourney.Core
             var fileContent = JsonSerializer.Serialize(data);
             await CreateOrUpdateFile(client, repo, fileContent, path, "Geoguessr tournament.");
             return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}";
+        }
+
+        public static async Task<IReadOnlyCollection<string>> GameLinks(IConfiguration configuration)
+        {
+            var client = GitHubClient(configuration);
+            if (client == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            var user = await client.User.Current();
+            var owner = user.Login.ToLower();
+            var repoName = $"{owner}.github.io";
+            var repo = await CreateRepositoryIfNotExists(client, owner, repoName);
+            var contents = await client.Repository.Content.GetAllContents(repo.Id, "geoguessr");
+            var githubHtmlFilePath = TournamentTemplateGithubPath();
+            var urls = new List<string>();
+            foreach (var tournamentFolder in contents.Where(x => DateTime.TryParseExact(x.Name, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out _)))
+            {
+                var tournamentFiles = await client.Repository.Content.GetAllContents(repo.Id, tournamentFolder.Path);
+                foreach (var tournamentFile in tournamentFiles)
+                {
+                    var url = $"https://{repoName}/{githubHtmlFilePath}?id={tournamentFolder.Name}/{tournamentFile.Name.Replace(".json", string.Empty)}{BranchQueryString(repo)}";
+                    urls.Add(url);
+                }
+            }
+
+            return urls;
         }
 
         static string TournamentTemplateGithubPath()

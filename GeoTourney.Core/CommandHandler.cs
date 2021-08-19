@@ -283,6 +283,16 @@ namespace GeoTourney.Core
                     await GeoguessrApi.GenerateMap(page, inputCommand.Split(' ').Last());
                     return "Map update/creation done.";
                 }
+                else if (inputCommand == "all-game-links")
+                {
+                    var links = await Github.GameLinks(config);
+                    if (links.Any())
+                    {
+                        var filePath = "all-game-links.txt";
+                        await File.WriteAllTextAsync(filePath, string.Join(Environment.NewLine, links));
+                        await WriteOutput($"Saved links in {filePath}");
+                    }
+                }
             }
             catch (Exception e)
             {
