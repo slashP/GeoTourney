@@ -253,3 +253,4 @@ Projects/Komplett.Payments.Api/redirect.*
 logs/
 appsettings.json
 credentials.json
+local-authentication.json

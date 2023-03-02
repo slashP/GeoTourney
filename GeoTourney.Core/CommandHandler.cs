@@ -172,7 +172,7 @@ namespace GeoTourney.Core
                 {
                     if (tournament.GameState == GameState.Running && commandType != CommandType.DamnIt)
                     {
-                        var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !!{inputCommand} to ignore.";
+                        var message = $"Game #{tournament.CurrentGameNumber()} has not ended. Use !endgame to end it first, or !!{inputCommand} to ignore and overwrite.";
                         await WriteOutput(message);
                         return message;
                     }

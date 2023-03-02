@@ -31,7 +31,7 @@ namespace GeoTourney.Core
             {
                 var validGameModes = Enum.GetValues<GeoguessrApi.GameMode>()
                     .Except(new[] {GeoguessrApi.GameMode.Invalid}).Select(x => x.ToString().ToLower());
-                return ($"Game mode {gameModeDescription} not known. One of {string.Join(", ", validGameModes)}", null, null);
+                return ($"Game mode {gameModeDescription} not known. Use one of {string.Join(", ", validGameModes)}", null, null);
             }
 
             var mapId = await FindMapId((mapKey ?? string.Empty).ToLower(), mapIdsPlayed);
