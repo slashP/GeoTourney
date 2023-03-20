@@ -21,7 +21,7 @@ namespace GeoTourney.Core
         static readonly SizeAndTimeLimitedQueue ChallengeLinkCallsPerHour = new(Lifetime, MaxApiCallsPerHour);
         static readonly GeoTournament.PlayerGame[] Empty = Array.Empty<GeoTournament.PlayerGame>();
 
-        public static async Task<(string? error, IReadOnlyCollection<GeoTournament.PlayerGame> playerGames)> LoadGame(string gameId, Page page, IConfiguration config)
+        public static async Task<(string? error, IReadOnlyCollection<GeoTournament.PlayerGame> playerGames)> LoadGame(string gameId, IPage page, IConfiguration config)
         {
             var bannedUsersIds = await AppDataProvider.BannedUsersIds();
 
@@ -45,22 +45,25 @@ namespace GeoTourney.Core
                 }
 
                 var playerGames = new List<GeoTournament.PlayerGame>();
-                List<GeoTournament.PlayerGame> games;
-                var maxItems = 50;
+                ChallengeResult? challengeResult = null;
+                var maxItems = 26;
                 do
                 {
                     limitPerHour.TryEnqueue(DateTime.UtcNow);
-                    games = await GetWithFetch<List<GeoTournament.PlayerGame>>(
-                                    page,
-                                    $"results/scores/{gameId}/{playerGames.Count}/{maxItems}") ??
-                                new List<GeoTournament.PlayerGame>();
-                    playerGames.AddRange(games);
+                    var paginationToken = !string.IsNullOrEmpty(challengeResult?.paginationToken)
+                        ? $"&paginationToken={challengeResult.paginationToken}"
+                        : string.Empty;
+                    challengeResult = await GetWithFetch<ChallengeResult>(
+                                              page,
+                                              $"results/highscores/{gameId}?friends=false&limit={maxItems}{paginationToken}") ??
+                                          new ChallengeResult();
+                    playerGames.AddRange(challengeResult.items);
                     if (!playerGames.Any())
                     {
                         return ("It looks like you haven't finished the game?", Empty);
                     }
 
-                } while (games.Count == maxItems && !limitPerHour.IsFull());
+                } while (challengeResult.items.Length == maxItems && !limitPerHour.IsFull());
 
                 var filteredGames = playerGames.Where(x => !bannedUsersIds.Contains(x.userId)).ToList();
                 CachedGames.Add(gameId, filteredGames);
@@ -73,7 +76,7 @@ namespace GeoTourney.Core
             }
         }
 
-        public static async Task<(string? error, string? gameId, string? mapId)> GenerateChallengeLink(Page page, IConfiguration config, ushort timeLimit, GameMode gameMode, string mapId)
+        public static async Task<(string? error, string? gameId, string? mapId)> GenerateChallengeLink(IPage page, IConfiguration config, ushort timeLimit, GameMode gameMode, string mapId)
         {
             var error = await VerifySignedIn(page, config);
             if (error != null)
@@ -130,7 +133,7 @@ namespace GeoTourney.Core
             }
         }
 
-        public static async Task GenerateMap(Page page, string folder)
+        public static async Task GenerateMap(IPage page, string folder)
         {
             var locations = JsonSerializer.Deserialize<List<GeoguessrMapLocation>>(await File.ReadAllTextAsync(Path.Combine(folder, "locations.json"))) ?? new();
             var metadataPath = Path.Combine(folder, "metadata.json");
@@ -166,7 +169,7 @@ namespace GeoTourney.Core
             return $"{CallsPerHour(ChallengeResultsCallsPerHour, "api/v3/results/scores")}. {CallsPerHour(ChallengeLinkCallsPerHour, "api/v3/challenges")}";
         }
 
-        public static async Task<bool> TrySignInFromLocalFile(Page page)
+        public static async Task<bool> TrySignInFromLocalFile(IPage page)
         {
             try
             {
@@ -197,21 +200,21 @@ namespace GeoTourney.Core
 
         public static string ResultsLink(string gameId) => $"https://www.geoguessr.com/results/{gameId}";
 
-        static async Task<T?> PostWithFetch<T>(Page page, object requestBody, string path)
+        static async Task<T?> PostWithFetch<T>(IPage page, object requestBody, string path)
         {
             var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
             var script = $@"fetch('{apiUrl}', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({requestBody})}}).then(response => response.json()).then(x => JSON.stringify(x))";
             return await CallGeoguessrApi<T>(page, script);
         }
 
-        static async Task<T?> GetWithFetch<T>(Page page, string path)
+        static async Task<T?> GetWithFetch<T>(IPage page, string path)
         {
             var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
             var script = $@"fetch('{apiUrl}', {{method: 'GET', headers: {{'Content-Type': 'application/json'}}}}).then(response => response.json()).then(x => JSON.stringify(x))";
             return await CallGeoguessrApi<T>(page, script);
         }
 
-        static async Task<T?> CallGeoguessrApi<T>(Page page, string script)
+        static async Task<T?> CallGeoguessrApi<T>(IPage page, string script)
         {
             var result = await page.EvaluateExpressionAsync<string>(script);
             if (WasNotAllowed(result))
@@ -220,10 +223,18 @@ namespace GeoTourney.Core
             }
 
             await SaveTokenInLocalAuthenticationFile(page);
-            return JsonSerializer.Deserialize<T>(result);
+            try
+            {
+                return JsonSerializer.Deserialize<T>(result);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine($"JSON response:{Environment.NewLine}{result}");
+                throw;
+            }
         }
 
-        static async Task SaveTokenInLocalAuthenticationFile(Page page)
+        static async Task SaveTokenInLocalAuthenticationFile(IPage page)
         {
             try
             {
@@ -245,7 +256,7 @@ namespace GeoTourney.Core
         }
 
 
-        static async Task<string?> VerifySignedIn(Page page, IConfiguration config)
+        static async Task<string?> VerifySignedIn(IPage page, IConfiguration config)
         {
             var signInCookie = await GetSignInCookie(page);
             if (signInCookie == null)
@@ -259,7 +270,7 @@ namespace GeoTourney.Core
             return null;
         }
 
-        static async Task<CookieParam?> GetSignInCookie(Page page)
+        static async Task<CookieParam?> GetSignInCookie(IPage page)
         {
             try
             {
@@ -341,6 +352,12 @@ namespace GeoTourney.Core
             Move,
             NoMove,
             NMPZ
+        }
+
+        record ChallengeResult
+        {
+            public GeoTournament.PlayerGame[] items { get; set; } = Array.Empty<GeoTournament.PlayerGame>();
+            public string paginationToken { get; set; } = string.Empty;
         }
     }
 }

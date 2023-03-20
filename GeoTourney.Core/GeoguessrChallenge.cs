@@ -16,7 +16,7 @@ namespace GeoTourney.Core
         static Random random = new();
 
         public static async Task<(string? error, string? gameId, string? mapId)> Create(
-            Page page,
+            IPage page,
             IConfiguration config,
             string? mapKey,
             string? timeDescription,

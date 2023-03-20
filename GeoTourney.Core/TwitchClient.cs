@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using TwitchLib.Client.Enums;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
@@ -50,9 +51,14 @@ namespace GeoTourney.Core
 
         public Task KeepAlive()
         {
-            if (_client == null || !_client.IsConnected || !_client.JoinedChannels.Any())
+            if (_client == null || !_client.IsConnected)
             {
                 Initialize();
+            }
+
+            if (_client != null && !_client.JoinedChannels.Any())
+            {
+                _client.JoinChannel(_twitchChannel);
             }
 
             return Task.CompletedTask;
@@ -75,7 +81,12 @@ namespace GeoTourney.Core
                 _client = new TwitchLib.Client.TwitchClient(customClient);
                 _client.Initialize(credentials, _twitchChannel);
                 _client.OnMessageReceived += Client_OnMessageReceived;
-
+                _client.OnLog += (sender, args) => WriteToConsole($"{args.DateTime} | {args.BotUsername} | {args.Data}");
+                _client.OnConnected += (sender, args) => WriteToConsole($"Connected {args.BotUsername} | {args.AutoJoinChannel}");
+                _client.OnDisconnected += (sender, args) => WriteToConsole("Disconnected");
+                _client.OnReconnected += (sender, args) => WriteToConsole("Reconnected");
+                _client.OnChannelStateChanged += (sender, args) => WriteToConsole($"Channel state changed {args.Channel} | {args.ChannelState}");
+                _client.OnJoinedChannel += (sender, args) => WriteToConsole($"Joined channel {args.Channel} | {args.BotUsername}");
                 void Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
                 {
                     if (e.ChatMessage.IsBroadcaster || e.ChatMessage.IsModerator)
@@ -84,13 +95,33 @@ namespace GeoTourney.Core
                     }
                 }
 
-                _client.Connect();
-                return InitializationStatus.Ok;
+                _client.OnCommunitySubscription += (sender, args) => OnSub(args.GiftedSubscription.MsgParamSubPlan, args.GiftedSubscription.Login);
+                _client.OnGiftedSubscription += (sender, args) => OnSub(args.GiftedSubscription.MsgParamSubPlan, args.GiftedSubscription.Login);
+                _client.OnContinuedGiftedSubscription += (sender, args) => OnSub(SubscriptionPlan.Tier1, args.ContinuedGiftedSubscription.Login);
+                _client.OnNewSubscriber += (sender, args) => OnSub(args.Subscriber.SubscriptionPlan, args.Subscriber.Login);
+                _client.OnPrimePaidSubscriber += (sender, args) => OnSub(args.PrimePaidSubscriber.SubscriptionPlan, args.PrimePaidSubscriber.Login);
+                _client.OnReSubscriber += (sender, args) => OnSub(args.ReSubscriber.SubscriptionPlan, args.ReSubscriber.Login);
+
+                var connected = _client.Connect();
+                return connected ? InitializationStatus.Ok : InitializationStatus.Disabled;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
                 return InitializationStatus.Failed;
+            }
+        }
+
+        private void OnSub(SubscriptionPlan subscriptionPlan, string login)
+        {
+            _onMessageReceived?.Invoke(null, $"!subscription {subscriptionPlan}|{login}");
+        }
+
+        private static void WriteToConsole(string? message)
+        {
+            if (Config.IsDebug())
+            {
+                Console.WriteLine(message);
             }
         }
     }

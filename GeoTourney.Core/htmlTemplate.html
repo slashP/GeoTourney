@@ -331,12 +331,13 @@ ${game.playerGames.map((pg, i) => createGameRow(game, pg, i)).join('')}
             </div>
 </div>
 `;
+    const maxNumberOfGamesShownInOverallSummary = 20;
     const createTournamentTableRow = (playerInTournament, index) => `
 <tr>
             <td class="text-right">${index + 1}</td>
             <td>${playerInTournament.playerName}</td>
             <td class="text-right" title="${totalPointsExtraInfo(playerInTournament, games)}">${numberFormat.format(playerInTournament.totalPoints)}</td>
-${playerInTournament.games.map((x, i) => `<td class="text-right" title="${gameExtraInfo(games, i, playerInTournament)}">${x.gamePoints === null ? "-" : numberFormat.format(x.gamePoints)}</td>`).join('')}
+${playerInTournament.games.slice(0, maxNumberOfGamesShownInOverallSummary).map((x, i) => `<td class="text-right" title="${gameExtraInfo(games, i, playerInTournament)}">${x.gamePoints === null ? "-" : numberFormat.format(x.gamePoints)}</td>`).join('')}
 </tr>
 `;
     const createTournamentTable = tournament => `
@@ -346,7 +347,7 @@ ${playerInTournament.games.map((x, i) => `<td class="text-right" title="${gameEx
                 <th class="text-right">Overall position</th>
                 <th>Player</th>
                 <th class="text-right">Total points</th>
-${tournament.players[0].games.map((_, i) => `<th class="text-right">Game ${i + 1}</th>`).join('')}
+${tournament.players[0].games.slice(0, maxNumberOfGamesShownInOverallSummary).map((_, i) => `<th class="text-right">Game ${i + 1}</th>`).join('')}
             </tr>
 ${tournament.players.map(createTournamentTableRow).join('')}
         </table>

@@ -13,7 +13,7 @@ namespace GeoTourney.Core
             IConfiguration configuration,
             EventHandler<string> onMessageReceived)
         {
-            _folder = configuration["LogFolder"];
+            _folder = configuration["LogFolder"] ?? string.Empty;
             var initializationStatus = string.IsNullOrEmpty(_folder) || !Directory.Exists(_folder) ? InitializationStatus.Disabled : InitializationStatus.Ok;
             return Task.FromResult(initializationStatus);
         }

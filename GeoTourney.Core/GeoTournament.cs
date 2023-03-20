@@ -45,7 +45,7 @@ namespace GeoTourney.Core
             };
         }
 
-        public async Task<string?> ToggleEliminations(Page page, IConfiguration config)
+        public async Task<string?> ToggleEliminations(IPage page, IConfiguration config)
         {
             PlayWithEliminations = !PlayWithEliminations;
             // safeguarding from crazy situations.
@@ -111,11 +111,11 @@ namespace GeoTourney.Core
             return status == EliminationStatus.Revived ? EliminationStatus.StillInTheGame : status;
         }
 
-        public async Task<string?> CheckIfCurrentGameFinished(Page page, IConfiguration config)
+        public async Task<(string? messsageToChat, string? error)> CheckIfCurrentGameFinished(IPage page, IConfiguration config)
         {
             if (GameState == GameState.NotActive || GameState == GameState.PendingEliminations)
             {
-                return null;
+                return (null, null);
             }
 
             var (error, playerGames) = await GeoguessrApi.LoadGame(CurrentGameId!, page, config);
@@ -130,17 +130,17 @@ namespace GeoTourney.Core
                         ? $" {didNotPlayThisGame.Count} did not play this round, but played the one before."
                         : string.Empty;
                     GameState = GameState.PendingEliminations;
-                    return $"{eliminationPossibilities.Count} players are still in the game.{didNotPlayDescritpion} How many do you want to eliminate?";
+                    return ($"{eliminationPossibilities.Count} players are still in the game.{didNotPlayDescritpion} How many do you want to eliminate?", null);
                 }
 
                 var messageToChat = await FinishGame(config, playerGames, new List<string>());
-                return messageToChat;
+                return (messageToChat, null);
             }
 
-            return error;
+            return (null, error);
         }
 
-        public async Task<string?> EliminateAndFinish(Page page, IConfiguration config, int numberOfEliminations)
+        public async Task<string?> EliminateAndFinish(IPage page, IConfiguration config, int numberOfEliminations)
         {
             if (GameState != GameState.PendingEliminations)
             {
@@ -155,7 +155,7 @@ namespace GeoTourney.Core
             return $"{numberOfEliminations} players eliminated. {url}";
         }
 
-        public async Task<string?> EliminateAndFinish(Page page, PointsDescription pointsDescription, int threshold, IConfiguration config)
+        public async Task<string?> EliminateAndFinish(IPage page, PointsDescription pointsDescription, int threshold, IConfiguration config)
         {
             if (GameState != GameState.PendingEliminations)
             {
@@ -381,7 +381,7 @@ namespace GeoTourney.Core
             return await GenerateUrlToLatestTournamentInfo(config);
         }
 
-        public async Task<string?> SetCurrentGame(string gameId, Page page, IConfiguration config, string? mapId)
+        public async Task<string?> SetCurrentGame(string gameId, IPage page, IConfiguration config, string? mapId)
         {
             if (GameState == GameState.PendingEliminations)
             {

@@ -14,7 +14,6 @@ var config = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json").Build();
 Regex readCommandFromFileRegex = new(@"^read ([^<>:;,?""*|\/]+)$");
-
 await Startup.InitiateAsync(config, page);
 
 while (true)

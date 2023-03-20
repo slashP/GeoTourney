@@ -254,3 +254,5 @@ logs/
 appsettings.json
 credentials.json
 local-authentication.json
+*.txt
+appdata.json

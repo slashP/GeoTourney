@@ -45,7 +45,6 @@ namespace GeoTourney.Core
             var secondsSinceMidnight = (int) (DateTime.Now - DateTime.Today).TotalSeconds;
             var id = $"{today}/{data.nickname}-{secondsSinceMidnight}";
             var path = $"geoguessr/{id}.json";
-            await DeleteFilesInFolder(client, repo, $"geoguessr/{today}", file => !string.IsNullOrEmpty(data.nickname) && file.Name.StartsWith(data.nickname));
             var fileContent = JsonSerializer.Serialize(data);
             await CreateOrUpdateFile(client, repo, fileContent, path, "Geoguessr tournament.");
             return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}";
@@ -130,7 +129,6 @@ namespace GeoTourney.Core
                 var id = DateTime.Now.Ticks.ToString();
                 var path = $"geoguessr/maps/{id}.json";
 
-                await DeleteFilesInFolder(client, repo, "geoguessr/maps", _ => true);
                 await CreateOrUpdateFile(client, repo, mapsContent, path, "Maps page.");
                 return $"https://{repoName}/{githubHtmlFilePath}?id={id}{BranchQueryString(repo)}";
             }
@@ -252,22 +250,6 @@ namespace GeoTourney.Core
                 {
                     Console.WriteLine($"The Github token provided does not have access to the 'public_repo' scope. Unable to create file '{path}' in repository {repo.FullName}");
                 }
-            }
-        }
-
-        static async Task DeleteFilesInFolder(GitHubClient client, Repository repo, string path, Func<RepositoryContent, bool> nameSelector)
-        {
-            try
-            {
-                var contents = await client.Repository.Content.GetAllContents(repo.Id, path);
-                foreach (var repositoryContent in contents.Where(nameSelector))
-                {
-                    await client.Repository.Content.DeleteFile(repo.Id, repositoryContent.Path,
-                        new DeleteFileRequest("Clean up old files.", repositoryContent.Sha));
-                }
-            }
-            catch (NotFoundException)
-            {
             }
         }
 

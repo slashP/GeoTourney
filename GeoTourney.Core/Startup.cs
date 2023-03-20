@@ -10,7 +10,7 @@ namespace GeoTourney.Core
 {
     public static class Startup
     {
-        public static async Task InitiateAsync(IConfiguration config, Page page)
+        public static async Task InitiateAsync(IConfiguration config, IPage page)
         {
             var name = typeof(GeoTournament).Assembly.GetName();
             Console.WriteLine($"Starting {name.Name} {Extensions.GetVersion()}");
@@ -35,7 +35,18 @@ namespace GeoTourney.Core
 
             if (await GeoguessrApi.TrySignInFromLocalFile(page))
             {
-                await page.GoToAsync("https://www.geoguessr.com/me/profile");
+                try
+                {
+                    await page.GoToAsync("https://www.geoguessr.com/me/profile", new NavigationOptions
+                    {
+                        Timeout = 5000
+                    });
+                }
+                catch(NavigationException){}
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
             }
             else
             {

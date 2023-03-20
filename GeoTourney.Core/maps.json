@@ -21,6 +21,20 @@
         "mapCreator": "Topotic (YouTube)"
     },
     {
+        "shortcut": "acw",
+        "group": "world",
+        "mapId": "62a44b22040f04bd36e8a914",
+        "mapName": "A Community World",
+        "mapCreator": "MatePotato"
+    },
+    {
+        "shortcut": "aaw",
+        "group": "world",
+        "mapId": "6089bfcff6a0770001f645dd",
+        "mapName": "An Arbitrary World",
+        "mapCreator": "slashP"
+    },
+    {
         "shortcut": "aiw",
         "group": "world",
         "mapId": "5b0a80f8596695b708122809",

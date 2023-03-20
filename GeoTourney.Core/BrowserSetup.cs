@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using PuppeteerSharp;
 
 namespace GeoTourney.Core
@@ -7,10 +8,10 @@ namespace GeoTourney.Core
     {
         public static readonly LaunchOptions LaunchOptions = new()
         {
-            DefaultViewport = new ViewPortOptions { Width = 1000, Height = 800 },
+            DefaultViewport = null,
             SlowMo = 5,
             Headless = false,
-            Args = new[] { "--start-maximized" }
+            Args = Array.Empty<string>()
         };
 
         public static async Task Initiate()

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using PuppeteerSharp;
+using TwitchLib.Client.Enums;
 
 namespace GeoTourney.Core
 {
@@ -15,7 +17,7 @@ namespace GeoTourney.Core
         // https://www.geoguessr.com/challenge/kdrp4V1ByTC2D7Qr
         static readonly Regex LessOrMoreThanRegex = new(@"^(elim|revive) (less|more) (than|then) (\d{1,5}?)");
         static readonly Regex LessOrMoreThanFinishGameRegex = new(@"^(less|more) (than|then) (\d{1,5}?)");
-        static readonly Regex ResultsUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/results\/([a-zA-Z0-9_.-]*)[\/]?$");
+        public static readonly Regex ResultsUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/results\/([a-zA-Z0-9_.-]*)[\/]?$");
         static readonly Regex ChallengeUrlRegex = new(@"^[!]?https:\/\/www.geoguessr.com\/challenge\/([a-zA-Z0-9_.-]*)[\/]?$");
         static readonly Regex LoadTournamentFromUrlRegex = new(@"^loadtournamentfrom https:\/\/([\a-z]*).github.io\/");
         static readonly Regex BanByUrlRegex = new(@"^ban https:\/\/www.geoguessr.com\/user\/([a-zA-Z0-9_.-]*)[\/]?$");
@@ -32,6 +34,10 @@ namespace GeoTourney.Core
         static List<IGameEventOutput> activeOutputs = new();
 
         static GeoTournament tournament = new("init", DateTime.UtcNow);
+        static DateTime lastKnownHotkeyFileWriteTimeUtc = DateTime.UtcNow;
+        private const string CountdownTournamentFilename = "countdown-tournament.txt";
+        private const string CountdownProgressFilename = "countdown-progress.txt";
+        private const string SubscriptionsFilename = "subscriptions.txt";
 
         public static async Task Initialize(IConfiguration config)
         {
@@ -44,9 +50,18 @@ namespace GeoTourney.Core
                 }
             }
             tournament = new(await NameGenerator.New(config), DateTime.UtcNow);
+            if (File.Exists(CountdownTournamentFilename) && Config.SectionExists("Countdown"))
+            {
+                var command = $"loadtournamentfrom {(await File.ReadAllLinesAsync(CountdownTournamentFilename)).FirstOrDefault()}";
+                var t = await GetTournamentFromCommandWithUrl(command);
+                if (t != null)
+                {
+                    tournament = t;
+                }
+            }
         }
 
-        public static async Task<string?> Handle(Page page, IConfiguration config, string? command, CommandType commandType, string? filenameSourceForCommand)
+        public static async Task<string?> Handle(IPage page, IConfiguration config, string? command, CommandType commandType, string? filenameSourceForCommand)
         {
             string? inputCommand = null;
             try
@@ -55,6 +70,50 @@ namespace GeoTourney.Core
                 if (inputCommand == null)
                 {
                     foreach (var output in activeOutputs) await output.KeepAlive();
+                    var hotkeyFile = Config.Read("Countdown", "HotKeyFile");
+                    if (File.Exists(hotkeyFile) && new FileInfo(hotkeyFile).LastWriteTimeUtc > lastKnownHotkeyFileWriteTimeUtc)
+                    {
+                        lastKnownHotkeyFileWriteTimeUtc = DateTime.UtcNow;
+                        var (_, endGameError) = await tournament.CheckIfCurrentGameFinished(page, config);
+                        if (endGameError != null)
+                        {
+                            var message = $"{endGameError} Link: {tournament.CurrentGameUrl()}";
+                            await WriteOutput(message);
+                            return message;
+                        }
+
+                        await File.WriteAllTextAsync(CountdownTournamentFilename, tournament.CurrentGithubResultsPageUrl);
+                        var defaultMap = Config.Read("Countdown", "DefaultMap");
+                        var map = string.IsNullOrEmpty(defaultMap) ? "aaw" : defaultMap;
+                        var defaultTime = Config.Read("Countdown", "DefaultTime");
+                        var time = string.IsNullOrEmpty(defaultTime) ? "30" : defaultTime;
+                        var defaultGameMode = Config.Read("Countdown", "DefaultGameMode");
+                        var gameMode = string.IsNullOrEmpty(defaultGameMode) ? "30" : defaultGameMode;
+                        var (error, gameId, mapId) = await GeoguessrChallenge.Create(page, config, map, time, gameMode, Array.Empty<string>());
+                        if (error != null)
+                        {
+                            await WriteOutput(error);
+                            return error;
+                        }
+
+                        if (gameId != null)
+                        {
+                            var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId);
+                            if (messageToChat != null)
+                            {
+                                await WriteOutput(messageToChat);
+                                Extensions.OpenUrl(GeoguessrApi.ChallengeLink(gameId));
+                            }
+                        }
+                    }
+
+                    var playerId = Config.Read("Countdown", "PlayerId") ?? string.Empty;
+                    if (!string.IsNullOrEmpty(playerId))
+                    {
+                        var progress = await GetCountdownProgress(playerId);
+                        var progressToFileText = Config.Read("Countdown", "ProgressToFileText")?.InterpolateCountdownValues(progress) ?? string.Empty;
+                        await File.WriteAllTextAsync(CountdownProgressFilename, progressToFileText);
+                    }
                 }
                 else if (ChallengeUrlRegex.IsMatch(inputCommand))
                 {
@@ -80,8 +139,9 @@ namespace GeoTourney.Core
                     }
 
                     await tournament.SetCurrentGame(gameId, page, config, null);
-                    var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
-                    if (messageToChat != null) await WriteOutput(messageToChat);
+                    var (messageToChat, error) = await tournament.CheckIfCurrentGameFinished(page, config);
+                    var toChat = messageToChat ?? error;
+                    if (toChat != null) await WriteOutput(toChat);
                 }
                 else if (inputCommand == "gamescore")
                 {
@@ -92,7 +152,7 @@ namespace GeoTourney.Core
                 }
                 else if (inputCommand == "endgame")
                 {
-                    var messageToChat = await tournament.CheckIfCurrentGameFinished(page, config);
+                    var (messageToChat, error) = await tournament.CheckIfCurrentGameFinished(page, config);
                     if (messageToChat != null)
                     {
                         await WriteOutput(messageToChat);
@@ -219,6 +279,14 @@ namespace GeoTourney.Core
                     await WriteOutput(messageToChat);
                     return messageToChat;
                 }
+                else if (inputCommand == "link")
+                {
+                    var messageToChat = tournament.CurrentGithubResultsPageUrl == null ? null : $"{tournament.CurrentGithubResultsPageUrl}&total=true";
+                    if (messageToChat != null)
+                    {
+                        await WriteOutput(messageToChat);
+                    }
+                }
                 else if (inputCommand == "currentgame")
                 {
                     var messageToChat = tournament.CurrentGameUrl() ?? "No game running.";
@@ -227,17 +295,7 @@ namespace GeoTourney.Core
                 }
                 else if (LoadTournamentFromUrlRegex.IsMatch(inputCommand))
                 {
-                    var username = LoadTournamentFromUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
-                    var url = inputCommand.Split(' ').Skip(1).First();
-                    var id = Extensions.GetFromQueryString(new Uri(url).Query, "id");
-                    if (id == null)
-                    {
-                        var message = $"Invalid URL. Missing ?id= | {url}";
-                        await WriteOutput(message);
-                        return message;
-                    }
-
-                    var t = await TournamentHistory.CreateTournamentFromUrl(username, id, url);
+                    var t = await GetTournamentFromCommandWithUrl(inputCommand);
                     if (t != null)
                     {
                         tournament = t;
@@ -251,6 +309,22 @@ namespace GeoTourney.Core
                     var url = await GoogleSheet.Create(tournament, filenameSourceForCommand);
                     var message = "URL to Google sheet copied to clipboard";
                     await Clip.SetText(url, message);
+                    return message;
+                }
+                else if (!string.IsNullOrEmpty(Config.Read("Countdown", "ProgressCommand")) && inputCommand.StartsWith(Config.Read("Countdown", "ProgressCommand") ?? Guid.NewGuid().ToString()))
+                {
+                    var playerId = Config.Read("Countdown", "PlayerId");
+                    if (string.IsNullOrEmpty(playerId))
+                    {
+                        var countdownMessage = "Countdown mode not active.";
+                        await WriteOutput(countdownMessage);
+                        return countdownMessage;
+                    }
+
+                    var progress = await GetCountdownProgress(playerId);
+                    var message = (Config.Read("Countdown", "ProgressCommandMessage") ?? "{PointsRemaining} points remaining.")
+                        .InterpolateCountdownValues(progress);
+                    await WriteOutput(message);
                     return message;
                 }
                 else if (BanByUrlRegex.IsMatch(inputCommand))
@@ -282,6 +356,15 @@ namespace GeoTourney.Core
                 {
                     await GeoguessrApi.GenerateMap(page, inputCommand.Split(' ').Last());
                     return "Map update/creation done.";
+                }
+                else if (inputCommand.StartsWith("subscription "))
+                {
+                    var subDescription = inputCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Last().Split('|');
+                    var subscriptionPlan = Enum.TryParse<SubscriptionPlan>(subDescription.FirstOrDefault(), out var plan) ? plan : SubscriptionPlan.NotSet;
+                    var loginName = subDescription.Length > 1 ? subDescription[1] : string.Empty;
+                    await File.AppendAllLinesAsync(SubscriptionsFilename, new[] { $"{subscriptionPlan} {loginName} {DateTime.Now:O}" });
+                    await WritePrivateOutput($"{subscriptionPlan} subscription from {loginName}");
+                    return null;
                 }
                 else if (inputCommand == "all-game-links")
                 {
@@ -317,6 +400,29 @@ namespace GeoTourney.Core
             return null;
         }
 
+        private static async Task<GeoTournament?> GetTournamentFromCommandWithUrl(string inputCommand)
+        {
+            var username = LoadTournamentFromUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
+            var url = inputCommand.Split(' ').Skip(1).First();
+            var id = Extensions.GetFromQueryString(new Uri(url).Query, "id");
+            if (id == null)
+            {
+                var message = $"Invalid URL. Missing ?id= | {url}";
+                await WriteOutput(message);
+                return null;
+            }
+
+            try
+            {
+                return await TournamentHistory.CreateTournamentFromUrl(username, id, url);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return null;
+            }
+        }
+
         static void OnMessageReceived(object? sender, string? e)
         {
             var message = e ?? string.Empty;
@@ -325,6 +431,64 @@ namespace GeoTourney.Core
             else if (message.StartsWith("!")) ReadConsole.QueueCommand(message.Skip(1).AsString());
             else if (int.TryParse(message, out var number) && number >= 0) ReadConsole.QueueCommand(number.ToString());
         }
+
+        static async Task<CountDownProgress> GetCountdownProgress(string playerId)
+        {
+            var totalSum = tournament.Games.Sum(x => x.PlayerGames.Where(p => p.userId == playerId).Sum(p => p.totalScore));
+            var averageGameSum = tournament.Games.Any() ? tournament.Games.Average(x => x.PlayerGames.Where(p => p.userId == playerId).Sum(p => p.totalScore)) : 0;
+            var gamesPlayed = tournament.Games.Count(x => x.PlayerGames.Any(p => p.userId == playerId));
+            var countDownGoal = Config.Read("Countdown", "Goal");
+            var goalPoints = int.TryParse(countDownGoal, out var points) ? points : 0;
+            var subscriptionPunishment = await SubscriptionPunishment();
+            var remainingPoints = Math.Max(goalPoints - totalSum + subscriptionPunishment, 0);
+            var approximateNumberOfGamesLeft = averageGameSum > 0 ? Math.Round(remainingPoints / averageGameSum, 0) : 0;
+            return new CountDownProgress
+            {
+                TotalSum = totalSum,
+                AverageGameSum = averageGameSum,
+                ApproximateNumberOfGamesLeft = approximateNumberOfGamesLeft,
+                GoalPoints = goalPoints,
+                GoalPlusPunishment = goalPoints + subscriptionPunishment,
+                GamesPlayed = gamesPlayed,
+                RemainingPoints = remainingPoints
+            };
+        }
+
+        private static async Task<int> SubscriptionPunishment()
+        {
+            if (!File.Exists(SubscriptionsFilename))
+            {
+                return 0;
+            }
+
+            var subPunishmentPoints = int.TryParse(Config.Read("Countdown", "SubscriptionPunishment"), out var punishPoints) ? punishPoints : 25_000;
+            var subscriptionLines = await File.ReadAllLinesAsync(SubscriptionsFilename);
+            return subscriptionLines.Select(x => new
+            {
+                SubPlan = Enum.TryParse<SubscriptionPlan>(x.Split(' ').FirstOrDefault(), out var plan)
+                    ? plan
+                    : SubscriptionPlan.NotSet
+            }).Sum(x => SubPlanMultiplier(x.SubPlan) * subPunishmentPoints);
+        }
+
+        private static int SubPlanMultiplier(SubscriptionPlan subPlan) =>
+            subPlan switch
+            {
+                SubscriptionPlan.NotSet => 0,
+                SubscriptionPlan.Prime => 1,
+                SubscriptionPlan.Tier1 => 1,
+                SubscriptionPlan.Tier2 => 2,
+                SubscriptionPlan.Tier3 => 5,
+                _ => 0
+            };
+
+        static string InterpolateCountdownValues(this string message, CountDownProgress progress) => message
+            .Replace("{PointsRemaining}", progress.RemainingPoints.ToString("N0", CultureInfo.InvariantCulture))
+            .Replace("{TotalPointsPlayed}", progress.TotalSum.ToString("N0", CultureInfo.InvariantCulture))
+            .Replace("{GoalPlusPunishment}", progress.GoalPlusPunishment.ToString("N0", CultureInfo.InvariantCulture))
+            .Replace("{ApproximateGamesLeft}", progress.ApproximateNumberOfGamesLeft.ToString("N0", CultureInfo.InvariantCulture))
+            .Replace("{GamesPlayed}", progress.GamesPlayed.ToString("N0", CultureInfo.InvariantCulture));
+
 
         static async Task WriteOutput(string message)
         {
@@ -340,6 +504,17 @@ namespace GeoTourney.Core
             {
                 await output.Write(message);
             }
+        }
+
+        record CountDownProgress
+        {
+            public int TotalSum { get; set; }
+            public double AverageGameSum { get; set; }
+            public int GamesPlayed { get; set; }
+            public int GoalPoints { get; set; }
+            public int RemainingPoints { get; set; }
+            public double ApproximateNumberOfGamesLeft { get; set; }
+            public int GoalPlusPunishment { get; set; }
         }
     }
 }
