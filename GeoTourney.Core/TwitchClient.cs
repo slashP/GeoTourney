@@ -89,7 +89,12 @@ namespace GeoTourney.Core
                 _client.OnJoinedChannel += (sender, args) => WriteToConsole($"Joined channel {args.Channel} | {args.BotUsername}");
                 void Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
                 {
+                    var publicCommands = CommandHandler.PublicCommands();
                     if (e.ChatMessage.IsBroadcaster || e.ChatMessage.IsModerator)
+                    {
+                        _onMessageReceived?.Invoke(null, e.ChatMessage.Message);
+                    }
+                    else if (e.ChatMessage.Message.StartsWith("!") && publicCommands.Contains(e.ChatMessage.Message.Split(' ').First()[1..]))
                     {
                         _onMessageReceived?.Invoke(null, e.ChatMessage.Message);
                     }

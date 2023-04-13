@@ -410,6 +410,14 @@ namespace GeoTourney.Core
             return null;
         }
 
+        public static IReadOnlyCollection<string> PublicCommands()
+        {
+            return new[]
+            {
+                Config.Read("Countdown", "ProgressCommand")
+            }.Where(x => x != null).Select(x => x!).ToArray();
+        }
+
         private static async Task<GeoTournament?> GetTournamentFromCommandWithUrl(string inputCommand)
         {
             var username = LoadTournamentFromUrlRegex.Matches(inputCommand)[0].Groups[1].Value;
