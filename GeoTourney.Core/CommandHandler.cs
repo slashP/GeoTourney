@@ -38,6 +38,7 @@ namespace GeoTourney.Core
         private const string CountdownTournamentFilename = "countdown-tournament.txt";
         private const string CountdownProgressFilename = "countdown-progress.txt";
         private const string SubscriptionsFilename = "subscriptions.txt";
+        private const string BitsFilename = "bits.txt";
 
         public static async Task Initialize(IConfiguration config)
         {
@@ -366,6 +367,15 @@ namespace GeoTourney.Core
                     await WritePrivateOutput($"{subscriptionPlan} subscription from {loginName}");
                     return null;
                 }
+                else if (inputCommand.StartsWith("bits "))
+                {
+                    var bitsDescription = inputCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Last().Split('|');
+                    var bits = int.TryParse(bitsDescription.FirstOrDefault(), out var bitNumber) ? bitNumber : 0;
+                    var loginName = bitsDescription.Length > 1 ? bitsDescription[1] : string.Empty;
+                    await File.AppendAllLinesAsync(BitsFilename, new[] { $"{bits} {loginName} {DateTime.Now:O}" });
+                    await WritePrivateOutput($"{bits} bits from {loginName}");
+                    return null;
+                }
                 else if (inputCommand == "all-game-links")
                 {
                     var links = await Github.GameLinks(config);
@@ -440,15 +450,18 @@ namespace GeoTourney.Core
             var countDownGoal = Config.Read("Countdown", "Goal");
             var goalPoints = int.TryParse(countDownGoal, out var points) ? points : 0;
             var subscriptionPunishment = await SubscriptionPunishment();
-            var remainingPoints = Math.Max(goalPoints - totalSum + subscriptionPunishment, 0);
+            var bitsPunishment = await BitsPunishment();
+            var punishment = subscriptionPunishment + bitsPunishment;
+            var remainingPoints = Math.Max(goalPoints - totalSum + punishment, 0);
             var approximateNumberOfGamesLeft = averageGameSum > 0 ? Math.Round(remainingPoints / averageGameSum, 0) : 0;
             return new CountDownProgress
             {
                 TotalSum = totalSum,
+                TotalSumMinusPunishment = totalSum - punishment,
                 AverageGameSum = averageGameSum,
                 ApproximateNumberOfGamesLeft = approximateNumberOfGamesLeft,
                 GoalPoints = goalPoints,
-                GoalPlusPunishment = goalPoints + subscriptionPunishment,
+                GoalPlusPunishment = goalPoints + punishment,
                 GamesPlayed = gamesPlayed,
                 RemainingPoints = remainingPoints
             };
@@ -471,6 +484,23 @@ namespace GeoTourney.Core
             }).Sum(x => SubPlanMultiplier(x.SubPlan) * subPunishmentPoints);
         }
 
+        private static async Task<int> BitsPunishment()
+        {
+            if (!File.Exists(BitsFilename))
+            {
+                return 0;
+            }
+
+            var pointPunishmentPerBit = int.TryParse(Config.Read("Countdown", "PointsPerBitPunishment"), out var punishPoints) ? punishPoints : 50;
+            var bitsLines = await File.ReadAllLinesAsync(BitsFilename);
+            return bitsLines.Select(x => new
+            {
+                Bits = int.TryParse(x.Split(' ').FirstOrDefault(), out var plan)
+                    ? plan
+                    : 0
+            }).Sum(x => x.Bits * pointPunishmentPerBit);
+        }
+
         private static int SubPlanMultiplier(SubscriptionPlan subPlan) =>
             subPlan switch
             {
@@ -487,6 +517,7 @@ namespace GeoTourney.Core
             .Replace("{TotalPointsPlayed}", progress.TotalSum.ToString("N0", CultureInfo.InvariantCulture))
             .Replace("{GoalPlusPunishment}", progress.GoalPlusPunishment.ToString("N0", CultureInfo.InvariantCulture))
             .Replace("{ApproximateGamesLeft}", progress.ApproximateNumberOfGamesLeft.ToString("N0", CultureInfo.InvariantCulture))
+            .Replace("{TotalSumMinusPunishment}", progress.TotalSumMinusPunishment.ToString("N0", CultureInfo.InvariantCulture))
             .Replace("{GamesPlayed}", progress.GamesPlayed.ToString("N0", CultureInfo.InvariantCulture));
 
 
@@ -515,6 +546,7 @@ namespace GeoTourney.Core
             public int RemainingPoints { get; set; }
             public double ApproximateNumberOfGamesLeft { get; set; }
             public int GoalPlusPunishment { get; set; }
+            public int TotalSumMinusPunishment { get; set; }
         }
     }
 }

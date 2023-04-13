@@ -93,6 +93,11 @@ namespace GeoTourney.Core
                     {
                         _onMessageReceived?.Invoke(null, e.ChatMessage.Message);
                     }
+
+                    if (e.ChatMessage.Bits > 0)
+                    {
+                        _onMessageReceived?.Invoke(null, $"!bits {e.ChatMessage.Bits}|{e.ChatMessage.Username}");
+                    }
                 }
 
                 _client.OnCommunitySubscription += (sender, args) => OnSub(args.GiftedSubscription.MsgParamSubPlan, args.GiftedSubscription.Login);
@@ -101,7 +106,6 @@ namespace GeoTourney.Core
                 _client.OnNewSubscriber += (sender, args) => OnSub(args.Subscriber.SubscriptionPlan, args.Subscriber.Login);
                 _client.OnPrimePaidSubscriber += (sender, args) => OnSub(args.PrimePaidSubscriber.SubscriptionPlan, args.PrimePaidSubscriber.Login);
                 _client.OnReSubscriber += (sender, args) => OnSub(args.ReSubscriber.SubscriptionPlan, args.ReSubscriber.Login);
-
                 var connected = _client.Connect();
                 return connected ? InitializationStatus.Ok : InitializationStatus.Disabled;
             }

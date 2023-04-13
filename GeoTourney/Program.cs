@@ -18,7 +18,7 @@ await Startup.InitiateAsync(config, page);
 
 while (true)
 {
-    var inputCommand = ReadConsole.ReadLine(TimeSpan.FromSeconds(10));
+    var inputCommand = ReadConsole.ReadLine(TimeSpan.FromSeconds(3));
     var commandType = inputCommand?.StartsWith("!") ?? false ? CommandType.DamnIt : CommandType.Normal;
     if (inputCommand?.Equals("shutdown", StringComparison.OrdinalIgnoreCase) ?? false)
     {
