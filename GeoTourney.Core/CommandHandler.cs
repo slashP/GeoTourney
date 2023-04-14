@@ -35,10 +35,13 @@ namespace GeoTourney.Core
 
         static GeoTournament tournament = new("init", DateTime.UtcNow);
         static DateTime lastKnownHotkeyFileWriteTimeUtc = DateTime.UtcNow;
+        private static FileSystemWatcher? _watcher;
         private const string CountdownTournamentFilename = "countdown-tournament.txt";
         private const string CountdownProgressFilename = "countdown-progress.txt";
         private const string SubscriptionsFilename = "subscriptions.txt";
         private const string BitsFilename = "bits.txt";
+        private const string HotkeyFileChangedCommand = "hotkeyfilechanged";
+        private const string RecalculateCountdownCommand = "recalculatecountdown";
 
         public static async Task Initialize(IConfiguration config)
         {
@@ -53,13 +56,44 @@ namespace GeoTourney.Core
             tournament = new(await NameGenerator.New(config), DateTime.UtcNow);
             if (File.Exists(CountdownTournamentFilename) && Config.SectionExists("Countdown"))
             {
-                var command = $"loadtournamentfrom {(await File.ReadAllLinesAsync(CountdownTournamentFilename)).FirstOrDefault()}";
-                var t = await GetTournamentFromCommandWithUrl(command);
-                if (t != null)
+                var tournamentUrl = (await File.ReadAllLinesAsync(CountdownTournamentFilename)).FirstOrDefault();
+                if (!string.IsNullOrEmpty(tournamentUrl))
                 {
-                    tournament = t;
+                    var command = $"loadtournamentfrom {tournamentUrl}";
+                    var t = await GetTournamentFromCommandWithUrl(command);
+                    if (t != null)
+                    {
+                        tournament = t;
+                    }
                 }
             }
+
+            var currentDirectory = Directory.GetCurrentDirectory();
+            _watcher = new FileSystemWatcher(currentDirectory)
+            {
+                NotifyFilter = NotifyFilters.LastWrite,
+                Filter = "*.txt",
+                EnableRaisingEvents = true,
+            };
+            _watcher.Changed += (sender, args) =>
+            {
+                if (args.ChangeType != WatcherChangeTypes.Changed)
+                {
+                    return;
+                }
+
+                if (args.Name == Config.Read("Countdown", "HotKeyFile"))
+                {
+                    Console.WriteLine("Hotkey file changed");
+                    OnMessageReceived(null, $"!{HotkeyFileChangedCommand}");
+                }
+                else if (new[] { SubscriptionsFilename, BitsFilename, CountdownTournamentFilename }.Contains(args.Name))
+                {
+                    Console.WriteLine("Recalculating progress/points.");
+                    OnMessageReceived(null, $"!{RecalculateCountdownCommand}");
+                }
+            };
+
         }
 
         public static async Task<string?> Handle(IPage page, IConfiguration config, string? command, CommandType commandType, string? filenameSourceForCommand)
@@ -71,43 +105,45 @@ namespace GeoTourney.Core
                 if (inputCommand == null)
                 {
                     foreach (var output in activeOutputs) await output.KeepAlive();
-                    var hotkeyFile = Config.Read("Countdown", "HotKeyFile");
-                    if (File.Exists(hotkeyFile) && new FileInfo(hotkeyFile).LastWriteTimeUtc > lastKnownHotkeyFileWriteTimeUtc)
+                }
+                else if (inputCommand == HotkeyFileChangedCommand)
+                {
+                    var (_, endGameError) = await tournament.CheckIfCurrentGameFinished(page, config);
+                    if (endGameError != null)
                     {
-                        lastKnownHotkeyFileWriteTimeUtc = DateTime.UtcNow;
-                        var (_, endGameError) = await tournament.CheckIfCurrentGameFinished(page, config);
-                        if (endGameError != null)
-                        {
-                            var message = $"{endGameError} Link: {tournament.CurrentGameUrl()}";
-                            await WriteOutput(message);
-                            return message;
-                        }
-
-                        await File.WriteAllTextAsync(CountdownTournamentFilename, tournament.CurrentGithubResultsPageUrl);
-                        var defaultMap = Config.Read("Countdown", "DefaultMap");
-                        var map = string.IsNullOrEmpty(defaultMap) ? "aaw" : defaultMap;
-                        var defaultTime = Config.Read("Countdown", "DefaultTime");
-                        var time = string.IsNullOrEmpty(defaultTime) ? "30" : defaultTime;
-                        var defaultGameMode = Config.Read("Countdown", "DefaultGameMode");
-                        var gameMode = string.IsNullOrEmpty(defaultGameMode) ? "30" : defaultGameMode;
-                        var (error, gameId, mapId) = await GeoguessrChallenge.Create(page, config, map, time, gameMode, Array.Empty<string>());
-                        if (error != null)
-                        {
-                            await WriteOutput(error);
-                            return error;
-                        }
-
-                        if (gameId != null)
-                        {
-                            var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId);
-                            if (messageToChat != null)
-                            {
-                                await WriteOutput(messageToChat);
-                                Extensions.OpenUrl(GeoguessrApi.ChallengeLink(gameId));
-                            }
-                        }
+                        var currentGameUrl = tournament.CurrentGameUrl();
+                        var message = $"{endGameError} Link: {currentGameUrl}";
+                        await WriteOutput(message);
+                        Extensions.OpenUrl(currentGameUrl!);
+                        return message;
                     }
 
+                    await File.WriteAllTextAsync(CountdownTournamentFilename, tournament.CurrentGithubResultsPageUrl);
+                    var defaultMap = Config.Read("Countdown", "DefaultMap");
+                    var map = string.IsNullOrEmpty(defaultMap) ? "aaw" : defaultMap;
+                    var defaultTime = Config.Read("Countdown", "DefaultTime");
+                    var time = string.IsNullOrEmpty(defaultTime) ? "30" : defaultTime;
+                    var defaultGameMode = Config.Read("Countdown", "DefaultGameMode");
+                    var gameMode = string.IsNullOrEmpty(defaultGameMode) ? "30" : defaultGameMode;
+                    var (error, gameId, mapId) = await GeoguessrChallenge.Create(page, config, map, time, gameMode, Array.Empty<string>());
+                    if (error != null)
+                    {
+                        await WriteOutput(error);
+                        return error;
+                    }
+
+                    if (gameId != null)
+                    {
+                        var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId);
+                        if (messageToChat != null)
+                        {
+                            await WriteOutput(messageToChat);
+                            Extensions.OpenUrl(GeoguessrApi.ChallengeLink(gameId));
+                        }
+                    }
+                }
+                else if (inputCommand == RecalculateCountdownCommand)
+                {
                     var playerId = Config.Read("Countdown", "PlayerId") ?? string.Empty;
                     if (!string.IsNullOrEmpty(playerId))
                     {

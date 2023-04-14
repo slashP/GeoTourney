@@ -2,16 +2,26 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Octokit;
 using PuppeteerSharp;
 
 namespace GeoTourney.Core
 {
     public class GeoguessrApi
     {
+        static readonly HttpClient Client = new HttpClient
+        {
+            BaseAddress = new Uri("https://www.geoguessr.com/")
+        };
+
         const int MaxApiCallsPerHour = 100;
         const string AuthenticationFilePath = "local-authentication.json";
         static int ErrorMessageCount;
@@ -107,7 +117,7 @@ namespace GeoTourney.Core
                     GameMode.NMPZ => true,
                     _ => false
                 };
-                var requestBody = JsonSerializer.Serialize(new
+                var requestBody = new
                 {
                     map = mapId,
                     isCountryStreak = false,
@@ -116,7 +126,7 @@ namespace GeoTourney.Core
                     forbidZooming = forbidZooming,
                     forbidRotating = forbidRotating,
                     timeLimit = timeLimit
-                });
+                };
                 limitPerHour.TryEnqueue(DateTime.UtcNow);
                 var result = await PostWithFetch<ChallengeApiResult>(page, requestBody, "challenges");
                 if (result == null)
@@ -141,9 +151,8 @@ namespace GeoTourney.Core
             {
                 customCoordinates = locations
             };
-            var requestBody = JsonSerializer.Serialize(geoguessrMap);
             var url = string.IsNullOrEmpty(geoguessrMap.id) ? "profiles/maps" : $"profiles/maps/{geoguessrMap.id}";
-            var result = await PostWithFetch<CreateMapResult>(page, requestBody, url);
+            var result = await PostWithFetch<CreateMapResult>(page, geoguessrMap, url);
             if (result != null)
             {
                 var metadata = geoguessrMap with
@@ -202,22 +211,27 @@ namespace GeoTourney.Core
 
         static async Task<T?> PostWithFetch<T>(IPage page, object requestBody, string path)
         {
-            var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
-            var script = $@"fetch('{apiUrl}', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({requestBody})}}).then(response => response.json()).then(x => JSON.stringify(x))";
-            return await CallGeoguessrApi<T>(page, script);
+            var request = new HttpRequestMessage(HttpMethod.Post, $"api/v3/{path}");
+            var stringContent = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            request.Content = new StringContent(stringContent, Encoding.UTF8, "application/json");
+            return await CallGeoguessrApi<T>(page, request);
         }
 
         static async Task<T?> GetWithFetch<T>(IPage page, string path)
         {
-            var apiUrl = $"https://www.geoguessr.com/api/v3/{path}";
-            var script = $@"fetch('{apiUrl}', {{method: 'GET', headers: {{'Content-Type': 'application/json'}}}}).then(response => response.json()).then(x => JSON.stringify(x))";
-            return await CallGeoguessrApi<T>(page, script);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/v3/{path}");
+            return await CallGeoguessrApi<T>(page, request);
         }
 
-        static async Task<T?> CallGeoguessrApi<T>(IPage page, string script)
+        static async Task<T?> CallGeoguessrApi<T>(IPage page, HttpRequestMessage request)
         {
-            var result = await page.EvaluateExpressionAsync<string>(script);
-            if (WasNotAllowed(result))
+            var signInCookie = await GetSignInCookie(page);
+            request.Headers.Add("Cookie", $"{signInCookie!.Name}={signInCookie.Value}");
+            var response = await Client.SendAsync(request);
+            if (WasNotAllowed(response))
             {
                 return default;
             }
@@ -225,11 +239,11 @@ namespace GeoTourney.Core
             await SaveTokenInLocalAuthenticationFile(page);
             try
             {
-                return JsonSerializer.Deserialize<T>(result);
+                return await response.Content.ReadFromJsonAsync<T>();
             }
             catch (Exception)
             {
-                Console.WriteLine($"JSON response:{Environment.NewLine}{result}");
+                Console.WriteLine($"JSON response:{Environment.NewLine}{await response.Content.ReadAsStringAsync()}");
                 throw;
             }
         }
@@ -284,18 +298,7 @@ namespace GeoTourney.Core
             }
         }
 
-        static bool WasNotAllowed(string json)
-        {
-            try
-            {
-                var errorModel = JsonSerializer.Deserialize<ErrorModel>(json);
-                return !string.IsNullOrEmpty(errorModel?.message);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
+        static bool WasNotAllowed(HttpResponseMessage response) => response.StatusCode == HttpStatusCode.Unauthorized;
 
         static string RateLimitResponse()
         {
