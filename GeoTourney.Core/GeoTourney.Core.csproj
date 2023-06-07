@@ -31,7 +31,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.3" />
     <PackageReference Include="Octokit" Version="5.0.2" />
-    <PackageReference Include="PuppeteerSharp" Version="9.0.2" />
+    <PackageReference Include="PuppeteerSharp" Version="10.0.0" />
     <PackageReference Include="TextCopy" Version="6.2.1" />
     <PackageReference Include="TwitchLib.Client" Version="3.2.2" />
   </ItemGroup>
