@@ -108,7 +108,7 @@ namespace GeoTourney.Core
                 }
                 else if (inputCommand == HotkeyFileChangedCommand)
                 {
-                    var (_, endGameError) = await tournament.CheckIfCurrentGameFinished(page, config);
+                    var (_, endGameError) = await tournament.CheckIfCurrentGameFinished(page, config, SaveMode.Manual);
                     if (endGameError != null)
                     {
                         var currentGameUrl = tournament.CurrentGameUrl();
@@ -134,11 +134,13 @@ namespace GeoTourney.Core
 
                     if (gameId != null)
                     {
-                        var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId);
+                        var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId, SaveMode.Manual);
                         if (messageToChat != null)
                         {
                             await WriteOutput(messageToChat);
                             Extensions.OpenUrl(GeoguessrApi.ChallengeLink(gameId));
+                            await tournament.SaveAndGetGithubTournamentUrl(config);
+                            await File.WriteAllTextAsync(CountdownTournamentFilename, tournament.CurrentGithubResultsPageUrl);
                         }
                     }
                 }
@@ -162,7 +164,7 @@ namespace GeoTourney.Core
                         return message;
                     }
 
-                    var messageToChat = await tournament.SetCurrentGame(gameId, page, config, null);
+                    var messageToChat = await tournament.SetCurrentGame(gameId, page, config, null, SaveMode.Automatic);
                     if (messageToChat != null) await WriteOutput(messageToChat);
                 }
                 else if (ResultsUrlRegex.IsMatch(inputCommand))
@@ -175,8 +177,8 @@ namespace GeoTourney.Core
                         return message;
                     }
 
-                    await tournament.SetCurrentGame(gameId, page, config, null);
-                    var (messageToChat, error) = await tournament.CheckIfCurrentGameFinished(page, config);
+                    await tournament.SetCurrentGame(gameId, page, config, null, SaveMode.Automatic);
+                    var (messageToChat, error) = await tournament.CheckIfCurrentGameFinished(page, config, SaveMode.Automatic);
                     var toChat = messageToChat ?? error;
                     if (toChat != null) await WriteOutput(toChat);
                 }
@@ -189,7 +191,7 @@ namespace GeoTourney.Core
                 }
                 else if (inputCommand == "endgame")
                 {
-                    var (messageToChat, error) = await tournament.CheckIfCurrentGameFinished(page, config);
+                    var (messageToChat, error) = await tournament.CheckIfCurrentGameFinished(page, config, SaveMode.Automatic);
                     if (messageToChat != null)
                     {
                         await WriteOutput(messageToChat);
@@ -213,7 +215,7 @@ namespace GeoTourney.Core
                 }
                 else if (int.TryParse(inputCommand, out var number) && number >= 0)
                 {
-                    var messageToChat = await tournament.EliminateAndFinish(page, config, number);
+                    var messageToChat = await tournament.EliminateAndFinish(page, config, number, SaveMode.Automatic);
                     if (messageToChat != null)
                     {
                         await WriteOutput(messageToChat);
@@ -237,7 +239,7 @@ namespace GeoTourney.Core
                 else if (inputCommand.StartsWith("elim "))
                 {
                     var playerSearchTerm = inputCommand.Skip("elim ".Length).AsString();
-                    var messageToChat = await tournament.EliminateSpecificPlayer(playerSearchTerm, config);
+                    var messageToChat = await tournament.EliminateSpecificPlayer(playerSearchTerm, config, SaveMode.Automatic);
                     if (messageToChat != null)
                     {
                         await WriteOutput(messageToChat);
@@ -258,7 +260,7 @@ namespace GeoTourney.Core
                 {
                     var points = Extensions.IntFromString(inputCommand);
                     var pointsDescription = inputCommand.Contains("less", StringComparison.InvariantCultureIgnoreCase) ? PointsDescription.LessThan : PointsDescription.MoreThan;
-                    var messageToChat = await tournament.EliminateAndFinish(page, pointsDescription, points, config);
+                    var messageToChat = await tournament.EliminateAndFinish(page, pointsDescription, points, config, SaveMode.Automatic);
                     if (messageToChat != null)
                     {
                         await WriteOutput(messageToChat);
@@ -292,7 +294,7 @@ namespace GeoTourney.Core
 
                     if (gameId != null)
                     {
-                        var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId);
+                        var messageToChat = await tournament.SetCurrentGame(gameId, page, config, mapId, SaveMode.Automatic);
                         if (messageToChat != null)
                         {
                             await WriteOutput(messageToChat);

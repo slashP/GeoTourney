@@ -51,7 +51,7 @@ namespace GeoTourney.Core
             // safeguarding from crazy situations.
             if (GameState == GameState.PendingEliminations)
             {
-                return await EliminateAndFinish(page, config, 0);
+                return await EliminateAndFinish(page, config, 0, SaveMode.Automatic);
             }
 
             return null;
@@ -75,7 +75,7 @@ namespace GeoTourney.Core
             }
         }
 
-        async Task<string> FinishGame(IConfiguration config, IReadOnlyCollection<PlayerGame> playerGames, List<string> userIdsEliminated)
+        async Task<string> FinishGame(IConfiguration config, IReadOnlyCollection<PlayerGame> playerGames, List<string> userIdsEliminated, SaveMode saveMode)
         {
             var eliminationStatuses = Games.SelectMany(x => x.PlayerGames.Select(y => y.userId))
                 .Concat(playerGames.Select(y => y.userId)).Distinct().ToDictionary(id => id,
@@ -99,7 +99,7 @@ namespace GeoTourney.Core
             CurrentGameId = null;
             GameState = GameState.NotActive;
 
-            var url = await GenerateUrlToLatestTournamentInfo(config);
+            var url = await GenerateUrlToLatestTournamentInfo(config, saveMode);
             return $"Game #{newGame.GameNumber} finished. {url}";
         }
 
@@ -111,7 +111,7 @@ namespace GeoTourney.Core
             return status == EliminationStatus.Revived ? EliminationStatus.StillInTheGame : status;
         }
 
-        public async Task<(string? messsageToChat, string? error)> CheckIfCurrentGameFinished(IPage page, IConfiguration config)
+        public async Task<(string? messsageToChat, string? error)> CheckIfCurrentGameFinished(IPage page, IConfiguration config, SaveMode saveMode)
         {
             if (GameState == GameState.NotActive || GameState == GameState.PendingEliminations)
             {
@@ -133,14 +133,14 @@ namespace GeoTourney.Core
                     return ($"{eliminationPossibilities.Count} players are still in the game.{didNotPlayDescritpion} How many do you want to eliminate?", null);
                 }
 
-                var messageToChat = await FinishGame(config, playerGames, new List<string>());
+                var messageToChat = await FinishGame(config, playerGames, new List<string>(), saveMode);
                 return (messageToChat, null);
             }
 
             return (null, error);
         }
 
-        public async Task<string?> EliminateAndFinish(IPage page, IConfiguration config, int numberOfEliminations)
+        public async Task<string?> EliminateAndFinish(IPage page, IConfiguration config, int numberOfEliminations, SaveMode saveMode)
         {
             if (GameState != GameState.PendingEliminations)
             {
@@ -151,11 +151,11 @@ namespace GeoTourney.Core
             var eliminationPossibilities =
                 EliminationPossibilities(playerGames, Games).DistinctBy(x => x.userId).ToList();
             var eliminees = eliminationPossibilities.Take(numberOfEliminations).ToList();
-            var url = await FinishGame(config, playerGames, eliminees.Select(x => x.userId).ToList());
+            var url = await FinishGame(config, playerGames, eliminees.Select(x => x.userId).ToList(), saveMode);
             return $"{numberOfEliminations} players eliminated. {url}";
         }
 
-        public async Task<string?> EliminateAndFinish(IPage page, PointsDescription pointsDescription, int threshold, IConfiguration config)
+        public async Task<string?> EliminateAndFinish(IPage page, PointsDescription pointsDescription, int threshold, IConfiguration config, SaveMode saveMode)
         {
             if (GameState != GameState.PendingEliminations)
             {
@@ -166,11 +166,11 @@ namespace GeoTourney.Core
             var possibilities = EliminationPossibilities(playerGames, Games);
             var selector = PointsSelector(pointsDescription, threshold);
             var matchingEliminations = possibilities.Where(selector).ToList();
-            var url = await FinishGame(config, playerGames, matchingEliminations.Select(x => x.userId).ToList());
+            var url = await FinishGame(config, playerGames, matchingEliminations.Select(x => x.userId).ToList(), saveMode);
             return $"{matchingEliminations.Count} players eliminated. {url}";
         }
 
-        public async Task<string?> EliminateSpecificPlayer(string playerSearchTerm, IConfiguration config)
+        public async Task<string?> EliminateSpecificPlayer(string playerSearchTerm, IConfiguration config, SaveMode saveMode)
         {
             if (!PlayWithEliminations)
             {
@@ -203,7 +203,7 @@ namespace GeoTourney.Core
                 case EliminationStatus.StillInTheGame:
                 {
                     currentGame.EliminationStatuses[match.Value.userId] = EliminationStatus.Eliminated;
-                    var url = await GenerateUrlToLatestTournamentInfo(config);
+                    var url = await GenerateUrlToLatestTournamentInfo(config, saveMode);
                     return $"{match.Value.playerName} eliminated. {url}";
                 }
                 default: throw new ArgumentOutOfRangeException();
@@ -258,7 +258,7 @@ namespace GeoTourney.Core
                 currentGame.EliminationStatuses[matchingPlayer.userId] = newStatus;
             }
 
-            var url = await GenerateUrlToLatestTournamentInfo(config);
+            var url = await GenerateUrlToLatestTournamentInfo(config, SaveMode.Automatic);
             return $"{matchingPlayers.Count} {"player".Pluralize(matchingPlayers.Count)} {actionVerb}. {url}";
         }
 
@@ -298,7 +298,7 @@ namespace GeoTourney.Core
                 case EliminationStatus.Eliminated:
                 {
                     currentGame.EliminationStatuses[match.Value.userId] = EliminationStatus.Revived;
-                    var url = await GenerateUrlToLatestTournamentInfo(config);
+                    var url = await GenerateUrlToLatestTournamentInfo(config, SaveMode.Automatic);
                     return $"{match.Value.playerName} revived. {url}";
                 }
                 case EliminationStatus.Revived:
@@ -347,7 +347,18 @@ namespace GeoTourney.Core
             return matches.GroupBy(x => x.userId).Select(x => (x.Key, x.Last().playerName)).ToList();
         }
 
-        async Task<string> GenerateUrlToLatestTournamentInfo(IConfiguration configuration)
+        async Task<string?> GenerateUrlToLatestTournamentInfo(IConfiguration configuration, SaveMode saveMode)
+        {
+            if (saveMode == SaveMode.Manual)
+            {
+                return null;
+            }
+
+            var url = await SaveAndGetGithubTournamentUrl(configuration);
+            return url;
+        }
+
+        public async Task<string> SaveAndGetGithubTournamentUrl(IConfiguration configuration)
         {
             var data = TournamentDataCreator.GenerateTournamentData(this);
             var url = await Github.UploadTournamentData(configuration, data);
@@ -376,16 +387,16 @@ namespace GeoTourney.Core
             Console.WriteLine(ConsoleTable.From(rows).ToMinimalString());
         }
 
-        public async Task<string> PrintGameScore(IConfiguration config)
+        public async Task<string?> PrintGameScore(IConfiguration config)
         {
-            return await GenerateUrlToLatestTournamentInfo(config);
+            return await GenerateUrlToLatestTournamentInfo(config, SaveMode.Automatic);
         }
 
-        public async Task<string?> SetCurrentGame(string gameId, IPage page, IConfiguration config, string? mapId)
+        public async Task<string?> SetCurrentGame(string gameId, IPage page, IConfiguration config, string? mapId, SaveMode saveMode)
         {
             if (GameState == GameState.PendingEliminations)
             {
-                return await EliminateAndFinish(page, config, 0);
+                return await EliminateAndFinish(page, config, 0, saveMode);
             }
 
             if (IsCurrentGameSameAs(gameId))
@@ -492,6 +503,12 @@ namespace GeoTourney.Core
             public decimal lat { get; set; }
             public decimal lng { get; set; }
         }
+    }
+
+    public enum SaveMode
+    {
+        Automatic,
+        Manual
     }
 
     public enum EliminationStatus
