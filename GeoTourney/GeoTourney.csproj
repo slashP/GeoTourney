@@ -10,7 +10,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <VersionPrefix>2.3.4</VersionPrefix>
+    <VersionPrefix>2.3.5</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>

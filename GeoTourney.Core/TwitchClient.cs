@@ -6,6 +6,7 @@ using TwitchLib.Client.Enums;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
+using TwitchLib.Communication.Events;
 using TwitchLib.Communication.Models;
 
 namespace GeoTourney.Core
@@ -70,6 +71,24 @@ namespace GeoTourney.Core
         {
             try
             {
+                if (_client != null)
+                {
+                    _client.OnMessageReceived -= Client_OnMessageReceived;
+                    _client.OnLog -= ClientOnOnLog;
+                    _client.OnConnected -= ClientOnOnConnected;
+                    _client.OnDisconnected -= ClientOnOnDisconnected;
+                    _client.OnReconnected -= ClientOnOnReconnected;
+                    _client.OnChannelStateChanged -= ClientOnOnChannelStateChanged;
+                    _client.OnJoinedChannel -= ClientOnOnJoinedChannel;
+
+                    _client.OnCommunitySubscription -= ClientOnOnCommunitySubscription;
+                    _client.OnGiftedSubscription -= ClientOnOnGiftedSubscription;
+                    _client.OnContinuedGiftedSubscription -= ClientOnOnContinuedGiftedSubscription;
+                    _client.OnNewSubscriber -= ClientOnOnNewSubscriber;
+                    _client.OnPrimePaidSubscriber -= ClientOnOnPrimePaidSubscriber;
+                    _client.OnReSubscriber -= ClientOnOnReSubscriber;
+                }
+
                 var credentials = new ConnectionCredentials(_twitchBotUsername, _twitchOAuth);
                 var clientOptions = new ClientOptions
                 {
@@ -81,12 +100,12 @@ namespace GeoTourney.Core
                 _client = new TwitchLib.Client.TwitchClient(customClient);
                 _client.Initialize(credentials, _twitchChannel);
                 _client.OnMessageReceived += Client_OnMessageReceived;
-                _client.OnLog += (sender, args) => WriteToConsole($"{args.DateTime} | {args.BotUsername} | {args.Data}");
-                _client.OnConnected += (sender, args) => WriteToConsole($"Connected {args.BotUsername} | {args.AutoJoinChannel}");
-                _client.OnDisconnected += (sender, args) => WriteToConsole("Disconnected");
-                _client.OnReconnected += (sender, args) => WriteToConsole("Reconnected");
-                _client.OnChannelStateChanged += (sender, args) => WriteToConsole($"Channel state changed {args.Channel} | {args.ChannelState}");
-                _client.OnJoinedChannel += (sender, args) => WriteToConsole($"Joined channel {args.Channel} | {args.BotUsername}");
+                _client.OnLog += ClientOnOnLog;
+                _client.OnConnected += ClientOnOnConnected;
+                _client.OnDisconnected += ClientOnOnDisconnected;
+                _client.OnReconnected += ClientOnOnReconnected;
+                _client.OnChannelStateChanged += ClientOnOnChannelStateChanged;
+                _client.OnJoinedChannel += ClientOnOnJoinedChannel;
                 void Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
                 {
                     var publicCommands = CommandHandler.PublicCommands();
@@ -105,12 +124,12 @@ namespace GeoTourney.Core
                     }
                 }
 
-                _client.OnCommunitySubscription += (sender, args) => OnSub(args.GiftedSubscription.MsgParamSubPlan, args.GiftedSubscription.Login);
-                _client.OnGiftedSubscription += (sender, args) => OnSub(args.GiftedSubscription.MsgParamSubPlan, args.GiftedSubscription.Login);
-                _client.OnContinuedGiftedSubscription += (sender, args) => OnSub(SubscriptionPlan.Tier1, args.ContinuedGiftedSubscription.Login);
-                _client.OnNewSubscriber += (sender, args) => OnSub(args.Subscriber.SubscriptionPlan, args.Subscriber.Login);
-                _client.OnPrimePaidSubscriber += (sender, args) => OnSub(args.PrimePaidSubscriber.SubscriptionPlan, args.PrimePaidSubscriber.Login);
-                _client.OnReSubscriber += (sender, args) => OnSub(args.ReSubscriber.SubscriptionPlan, args.ReSubscriber.Login);
+                _client.OnCommunitySubscription += ClientOnOnCommunitySubscription;
+                _client.OnGiftedSubscription += ClientOnOnGiftedSubscription;
+                _client.OnContinuedGiftedSubscription += ClientOnOnContinuedGiftedSubscription;
+                _client.OnNewSubscriber += ClientOnOnNewSubscriber;
+                _client.OnPrimePaidSubscriber += ClientOnOnPrimePaidSubscriber;
+                _client.OnReSubscriber += ClientOnOnReSubscriber;
                 var connected = _client.Connect();
                 return connected ? InitializationStatus.Ok : InitializationStatus.Disabled;
             }
@@ -120,6 +139,30 @@ namespace GeoTourney.Core
                 return InitializationStatus.Failed;
             }
         }
+
+        private void ClientOnOnReSubscriber(object? sender, OnReSubscriberArgs args) => OnSub(args.ReSubscriber.SubscriptionPlan, args.ReSubscriber.Login);
+
+        private void ClientOnOnPrimePaidSubscriber(object? sender, OnPrimePaidSubscriberArgs args) => OnSub(args.PrimePaidSubscriber.SubscriptionPlan, args.PrimePaidSubscriber.Login);
+
+        private void ClientOnOnNewSubscriber(object? sender, OnNewSubscriberArgs args) => OnSub(args.Subscriber.SubscriptionPlan, args.Subscriber.Login);
+
+        private void ClientOnOnContinuedGiftedSubscription(object? sender, OnContinuedGiftedSubscriptionArgs args) => OnSub(SubscriptionPlan.Tier1, args.ContinuedGiftedSubscription.Login);
+
+        private void ClientOnOnGiftedSubscription(object? sender, OnGiftedSubscriptionArgs args) => OnSub(args.GiftedSubscription.MsgParamSubPlan, args.GiftedSubscription.Login);
+
+        private void ClientOnOnCommunitySubscription(object? sender, OnCommunitySubscriptionArgs args) => OnSub(args.GiftedSubscription.MsgParamSubPlan, args.GiftedSubscription.Login);
+
+        private static void ClientOnOnJoinedChannel(object? sender, OnJoinedChannelArgs args) => WriteToConsole($"Joined channel {args.Channel} | {args.BotUsername}");
+
+        private static void ClientOnOnChannelStateChanged(object? sender, OnChannelStateChangedArgs args) => WriteToConsole($"Channel state changed {args.Channel} | {args.ChannelState}");
+
+        private static void ClientOnOnReconnected(object? sender, OnReconnectedEventArgs e) => WriteToConsole("Reconnected");
+
+        private static void ClientOnOnDisconnected(object? sender, OnDisconnectedEventArgs e) => WriteToConsole("Disconnected");
+
+        private static void ClientOnOnConnected(object? sender, OnConnectedArgs args) => WriteToConsole($"Connected {args.BotUsername} | {args.AutoJoinChannel}");
+
+        private static void ClientOnOnLog(object? sender, OnLogArgs args) => WriteToConsole($"{args.DateTime} | {args.BotUsername} | {args.Data}");
 
         private void OnSub(SubscriptionPlan subscriptionPlan, string login)
         {
