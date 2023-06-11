@@ -490,10 +490,20 @@ namespace GeoTourney.Core
 
         static async Task<CountDownProgress> GetCountdownProgress(string playerId)
         {
-            var totalSum = tournament.Games.Sum(x => x.PlayerGames.Where(p => p.userId == playerId).Sum(p => p.totalScore));
+            var startWithPoints = int.TryParse(Config.Read("Countdown", "StartWithPoints"), out var manualPoints)
+                ? manualPoints
+                : 0;
+            var startWithNumberOfGames = int.TryParse(Config.Read("Countdown", "StartWithNumberOfGames"), out var manualGames)
+                ? manualGames
+                : 0;
+
+            var totalSum =
+                tournament.Games.Sum(x => x.PlayerGames.Where(p => p.userId == playerId).Sum(p => p.totalScore)) +
+                startWithPoints;
             var averageGameSum = tournament.Games.Any() ? tournament.Games.Average(x => x.PlayerGames.Where(p => p.userId == playerId).Sum(p => p.totalScore)) : 0;
-            var gamesPlayed = tournament.Games.Count(x => x.PlayerGames.Any(p => p.userId == playerId));
+            var gamesPlayed = tournament.Games.Count(x => x.PlayerGames.Any(p => p.userId == playerId)) + startWithNumberOfGames;
             var countDownGoal = Config.Read("Countdown", "Goal");
+
             var goalPoints = int.TryParse(countDownGoal, out var points) ? points : 0;
             var subscriptionPunishment = await SubscriptionPunishment();
             var bitsPunishment = await BitsPunishment();
