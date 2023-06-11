@@ -101,7 +101,7 @@ namespace GeoTourney.Core
             GeoTournament.GameObject thisGame,
             string userId)
         {
-            var statusThisGame = thisGame.EliminationStatuses[userId];
+            var statusThisGame = thisGame.EliminationStatuses.TryGetValue(userId, out var status) ? status : (EliminationStatus?)null;
             return statusThisGame switch
             {
                 EliminationStatus.Revived => "+",

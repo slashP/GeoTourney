@@ -77,9 +77,11 @@ namespace GeoTourney.Core
 
         async Task<string> FinishGame(IConfiguration config, IReadOnlyCollection<PlayerGame> playerGames, List<string> userIdsEliminated, SaveMode saveMode)
         {
-            var eliminationStatuses = Games.SelectMany(x => x.PlayerGames.Select(y => y.userId))
-                .Concat(playerGames.Select(y => y.userId)).Distinct().ToDictionary(id => id,
-                    id => NewEliminationStatus(userIdsEliminated, id));
+            var eliminationStatuses = PlayWithEliminations
+                ? Games.SelectMany(x => x.PlayerGames.Select(y => y.userId))
+                    .Concat(playerGames.Select(y => y.userId)).Distinct().ToDictionary(id => id,
+                        id => NewEliminationStatus(userIdsEliminated, id))
+                : new();
             var game = playerGames.First().game;
             var locations = await GeocodingClient.Locations(config, game.rounds);
             var newGame = new GameObject
@@ -444,7 +446,7 @@ namespace GeoTourney.Core
 
         public int CurrentGameNumber()
         {
-            return (Games.OrderByDescending(x => x.GameNumber).FirstOrDefault()?.GameNumber ?? 0) + 1;
+            return (Games.LastOrDefault()?.GameNumber ?? 0) + 1;
         }
 
         public record GameObject

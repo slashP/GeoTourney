@@ -20,6 +20,11 @@ namespace GeoTourney.Core
         public static async Task<IReadOnlyCollection<RoundLocation>> Locations(IConfiguration configuration, IEnumerable<GeoTournament.Round> rounds)
         {
             var apiKey = configuration["BigDataCloudApiKey"];
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                return Array.Empty<RoundLocation>();
+            }
+
             var tasks = rounds.Select(x => new
             {
                 Task = string.IsNullOrEmpty(apiKey) ? Task.FromResult<BigDataCloudResponse?>(null) : GetGeoDataFromBigDataCloud(x.lat, x.lng, apiKey),
